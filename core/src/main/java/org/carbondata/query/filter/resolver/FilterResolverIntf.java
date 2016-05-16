@@ -21,8 +21,6 @@ package org.carbondata.query.filter.resolver;
 import java.io.Serializable;
 
 import org.carbondata.core.carbon.AbsoluteTableIdentifier;
-import org.carbondata.core.carbon.datastore.IndexKey;
-import org.carbondata.core.carbon.datastore.block.SegmentProperties;
 import org.carbondata.query.carbon.executor.exception.QueryExecutionException;
 import org.carbondata.query.carbonfilterinterface.FilterExecuterType;
 import org.carbondata.query.evaluators.DimColumnResolvedFilterInfo;
@@ -61,22 +59,6 @@ public interface FilterResolverIntf extends Serializable {
    * @return DimColumnResolvedFilterInfo object
    */
   DimColumnResolvedFilterInfo getDimColResolvedFilterInfo();
-
-  /**
-   * API will get the start key based on the filter applied
-   * based on the key generator
-   *
-   * @return long[], array of start keys.
-   */
-  IndexKey getstartKey(SegmentProperties segmentProperties);
-
-  /**
-   * API will read the end key based on the max surrogate of
-   * particular dimension column
-   *
-   * @return
-   */
-  IndexKey getEndKey(SegmentProperties segmentProperties, AbsoluteTableIdentifier tableIdentifier);
 
   /**
    * API will return the filter executer type which will be used to evaluate

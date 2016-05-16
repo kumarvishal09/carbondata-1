@@ -27,8 +27,6 @@ import java.util.Map;
 
 import org.carbondata.core.carbon.datastore.IndexKey;
 import org.carbondata.core.carbon.metadata.schema.table.column.CarbonDimension;
-import org.carbondata.core.carbon.metadata.schema.table.column.CarbonMeasure;
-import org.carbondata.core.metadata.CarbonMetadata.Dimension;
 import org.carbondata.query.complex.querytypes.GenericQueryType;
 import org.carbondata.query.schema.metadata.DimColumnFilterInfo;
 
@@ -42,15 +40,6 @@ public class DimColumnResolvedFilterInfo implements Serializable {
    * column index in file
    */
   private int columnIndex = -1;
-
-  /**
-   * need compressed data from file
-   */
-  private boolean needCompressedData;
-
-  private Dimension dims;
-
-  private Dimension[] dimensions;
 
   /**
    * rowIndex
@@ -85,11 +74,8 @@ public class DimColumnResolvedFilterInfo implements Serializable {
 
   private Map<CarbonDimension, List<DimColumnFilterInfo>> dimensionResolvedFilter;
 
-  private Map<CarbonMeasure, List<DimColumnFilterInfo>> measureResolvedFilter;
-
   public DimColumnResolvedFilterInfo() {
     dimensionResolvedFilter = new HashMap<CarbonDimension, List<DimColumnFilterInfo>>(20);
-    measureResolvedFilter = new HashMap<CarbonMeasure, List<DimColumnFilterInfo>>(20);
   }
 
   public IndexKey getStarIndexKey() {
@@ -141,28 +127,12 @@ public class DimColumnResolvedFilterInfo implements Serializable {
     this.dimension = dimension;
   }
 
-  public Dimension[] getDimensions() {
-    return dimensions;
-  }
-
-  public void setDimensions(Dimension[] dimensions) {
-    this.dimensions = dimensions;
-  }
-
   public int getColumnIndex() {
     return columnIndex;
   }
 
   public void setColumnIndex(int columnIndex) {
     this.columnIndex = columnIndex;
-  }
-
-  public boolean isNeedCompressedData() {
-    return needCompressedData;
-  }
-
-  public void setNeedCompressedData(boolean needCompressedData) {
-    this.needCompressedData = needCompressedData;
   }
 
   public DimColumnFilterInfo getFilterValues() {
@@ -179,14 +149,6 @@ public class DimColumnResolvedFilterInfo implements Serializable {
 
   public void setRowIndex(int rowIndex) {
     this.rowIndex = rowIndex;
-  }
-
-  public Dimension getDims() {
-    return dims;
-  }
-
-  public void setDims(Dimension dims) {
-    this.dims = dims;
   }
 
   public boolean isDimensionExistsInCurrentSilce() {

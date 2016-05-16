@@ -21,6 +21,7 @@ package org.carbondata.query.filters;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
+import java.util.Map;
 
 import org.carbondata.common.logging.LogService;
 import org.carbondata.common.logging.LogServiceFactory;
@@ -32,7 +33,7 @@ import org.carbondata.core.carbon.datastore.block.AbstractIndex;
 import org.carbondata.core.carbon.datastore.impl.btree.BTreeDataRefNodeFinder;
 import org.carbondata.core.carbon.metadata.datatype.DataType;
 import org.carbondata.core.carbon.metadata.encoder.Encoding;
-import org.carbondata.core.keygenerator.KeyGenException;
+import org.carbondata.core.carbon.metadata.schema.table.column.CarbonDimension;
 import org.carbondata.core.keygenerator.KeyGenerator;
 import org.carbondata.query.carbon.executor.exception.QueryExecutionException;
 import org.carbondata.query.carbonfilterinterface.ExpressionType;
@@ -46,6 +47,7 @@ import org.carbondata.query.filter.resolver.FilterResolverIntf;
 import org.carbondata.query.filter.resolver.LogicalFilterResolverImpl;
 import org.carbondata.query.filter.resolver.RowLevelFilterResolverImpl;
 import org.carbondata.query.filters.measurefilter.util.FilterUtil;
+import org.carbondata.query.schema.metadata.DimColumnFilterInfo;
 
 public class FilterExpressionProcessor implements FilterProcessor {
 
@@ -91,21 +93,12 @@ public class FilterExpressionProcessor implements FilterProcessor {
     // selected block reference nodes based on filter resolver tree.
     LOGGER.info("preparing the start and end key for finding"
         + "start and end block as per filter resolver");
-    IndexKey searchStartKey = filterResolver.getstartKey(tableSegment.getSegmentProperties());
-    IndexKey searchEndKey = filterResolver.getEndKey(tableSegment.getSegmentProperties(),
-        tableIdentifier);
-    if (null == searchStartKey && null == searchEndKey) {
-      try {
-        // TODO need to handle for no dictionary dimensions
-        searchStartKey =
-            FilterUtil.prepareDefaultStartIndexKey(tableSegment.getSegmentProperties());
-        // TODO need to handle for no dictionary dimensions
-        searchEndKey = FilterUtil.prepareDefaultEndIndexKey(tableSegment.getSegmentProperties());
-      } catch (KeyGenException e) {
-        return listOfDataBlocksToScan;
-      }
-    }
-
+    Map<CarbonDimension, List<DimColumnFilterInfo>> traverseAndGetDimensionFilterMap =
+        FilterUtil.traverseAndGetDimensionFilterMap(filterResolver);
+    IndexKey searchStartKey = FilterUtil.getStartKeyWithFilter(traverseAndGetDimensionFilterMap,
+        tableSegment.getSegmentProperties());
+    IndexKey searchEndKey = FilterUtil
+        .getEndKeyWithFilter(traverseAndGetDimensionFilterMap, tableSegment.getSegmentProperties());
     LOGGER.info("Successfully retrieved the start and end key");
     long startTimeInMillis = System.currentTimeMillis();
     DataRefNodeFinder blockFinder = new BTreeDataRefNodeFinder(

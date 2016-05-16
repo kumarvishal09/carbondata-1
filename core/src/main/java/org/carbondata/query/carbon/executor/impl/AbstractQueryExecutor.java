@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import org.carbondata.common.logging.LogService;
 import org.carbondata.common.logging.LogServiceFactory;
@@ -54,6 +55,7 @@ import org.carbondata.query.carbon.model.QueryDimension;
 import org.carbondata.query.carbon.model.QueryMeasure;
 import org.carbondata.query.carbon.model.QueryModel;
 import org.carbondata.query.filters.measurefilter.util.FilterUtil;
+import org.carbondata.query.schema.metadata.DimColumnFilterInfo;
 
 import org.apache.commons.lang3.ArrayUtils;
 
@@ -271,19 +273,12 @@ public abstract class AbstractQueryExecutor implements QueryExecutor {
       // loading the filter executer tree for filter evaluation
       blockExecutionInfo.setFilterExecuterTree(FilterUtil
           .getFilterExecuterTree(queryModel.getFilterExpressionResolverTree(), blockKeyGenerator));
-      startIndexKey = queryModel.getFilterExpressionResolverTree()
-          .getstartKey(blockIndex.getSegmentProperties());
-      endIndexKey = queryModel.getFilterExpressionResolverTree()
-          .getEndKey(blockIndex.getSegmentProperties(), queryModel.getAbsoluteTableIdentifier());
-      if (null == startIndexKey && null == endIndexKey) {
-        try {
-          startIndexKey = FilterUtil.prepareDefaultStartIndexKey(segmentProperties);
-          endIndexKey = FilterUtil.prepareDefaultEndIndexKey(segmentProperties);
-        } catch (KeyGenException e) {
-          throw new QueryExecutionException(e);
-        }
-
-      }
+      Map<CarbonDimension, List<DimColumnFilterInfo>> traverseAndGetDimensionFilterMap =
+          FilterUtil.traverseAndGetDimensionFilterMap(queryModel.getFilterExpressionResolverTree());
+      startIndexKey = FilterUtil.getStartKeyWithFilter(traverseAndGetDimensionFilterMap,
+          blockIndex.getSegmentProperties());
+      endIndexKey = FilterUtil
+          .getEndKeyWithFilter(traverseAndGetDimensionFilterMap, blockIndex.getSegmentProperties());
     } else {
       try {
         startIndexKey = FilterUtil.prepareDefaultStartIndexKey(segmentProperties);

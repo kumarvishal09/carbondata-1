@@ -21,8 +21,6 @@ package org.carbondata.query.filter.resolver;
 import java.util.List;
 
 import org.carbondata.core.carbon.AbsoluteTableIdentifier;
-import org.carbondata.core.carbon.datastore.IndexKey;
-import org.carbondata.core.carbon.datastore.block.SegmentProperties;
 import org.carbondata.query.carbonfilterinterface.FilterExecuterType;
 import org.carbondata.query.evaluators.DimColumnResolvedFilterInfo;
 import org.carbondata.query.expression.ColumnExpression;
@@ -172,29 +170,6 @@ public class RestructureFilterResolverImpl implements FilterResolverIntf {
    */
   public DimColumnResolvedFilterInfo getDimColResolvedFilterInfo() {
     return dimColumnResolvedFilterInfo;
-  }
-
-  /**
-   * For restructure resolver no implementation is required for getting
-   * the start key since it already has default values
-   *
-   * @return IndexKey.
-   */
-  @Override public IndexKey getstartKey(SegmentProperties segmentProperties) {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-  /**
-   * For restructure resolver no implementation is required for getting
-   * the end  key since it already has default values
-   *
-   * @return IndexKey.
-   */
-  @Override public IndexKey getEndKey(SegmentProperties segmentProperties,
-      AbsoluteTableIdentifier tableIdentifier) {
-    // TODO Auto-generated method stub
-    return null;
   }
 
   /**

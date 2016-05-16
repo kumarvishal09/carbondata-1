@@ -19,8 +19,6 @@
 package org.carbondata.query.filter.resolver;
 
 import org.carbondata.core.carbon.AbsoluteTableIdentifier;
-import org.carbondata.core.carbon.datastore.IndexKey;
-import org.carbondata.core.carbon.datastore.block.SegmentProperties;
 import org.carbondata.query.carbonfilterinterface.ExpressionType;
 import org.carbondata.query.carbonfilterinterface.FilterExecuterType;
 import org.carbondata.query.evaluators.DimColumnResolvedFilterInfo;
@@ -75,16 +73,6 @@ public class LogicalFilterResolverImpl implements FilterResolverIntf {
   }
 
   @Override public DimColumnResolvedFilterInfo getDimColResolvedFilterInfo() {
-    return null;
-  }
-
-  @Override public IndexKey getstartKey(SegmentProperties segmentProperties) {
-    return null;
-  }
-
-  @Override
-  public IndexKey getEndKey(SegmentProperties segmentProperties,
-      AbsoluteTableIdentifier tableIdentifier) {
     return null;
   }
 
