@@ -17,9 +17,9 @@
 
 package org.carbondata.spark.rdd
 
+import org.apache.spark.{Logging, Partition, SparkContext, TaskContext}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.execution.command.Partitioner
-import org.apache.spark.{Logging, Partition, SparkContext, TaskContext}
 
 import org.carbondata.core.carbon.metadata.CarbonMetadata
 import org.carbondata.query.scanner.impl.{CarbonKey, CarbonValue}

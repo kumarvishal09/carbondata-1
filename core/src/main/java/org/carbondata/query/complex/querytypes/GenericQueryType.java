@@ -65,9 +65,6 @@ public interface GenericQueryType {
 
   DataType getSchemaType();
 
-//  Object getDataBasedOnDataTypeFromSurrogates(List<InMemoryTable> slices, ByteBuffer surrogateData,
-//      Dimension[] dimensions);
-
   void parseAndGetResultBytes(ByteBuffer complexData, DataOutputStream dataOutput)
       throws IOException;
 
