@@ -33,7 +33,7 @@ import org.carbondata.core.carbon.metadata.encoder.Encoding;
 import org.carbondata.core.constants.CarbonCommonConstants;
 import org.carbondata.core.util.CarbonUtil;
 import org.carbondata.query.aggregator.MeasureAggregator;
-import org.carbondata.query.aggregator.util.AggUtil;
+import org.carbondata.query.aggregator.util.MeasureAggregatorFactory;
 import org.carbondata.query.carbon.executor.exception.QueryExecutionException;
 import org.carbondata.query.carbon.processor.BlocksChunkHolder;
 import org.carbondata.query.carbonfilterinterface.RowImpl;
@@ -206,9 +206,9 @@ public class RowLevelFilterExecuterImpl implements FilterExecuter {
         record[msrColumnEvalutorInfo.getRowIndex()] = msrColumnEvalutorInfo.getDefaultValue();
       } else {
         if (msrColumnEvalutorInfo.isCustomMeasureValue()) {
-          MeasureAggregator aggregator = AggUtil
-              .getAggregator(msrColumnEvalutorInfo.getAggregator(), false, false, null, false, 0,
-                  msrType);
+          MeasureAggregator aggregator = MeasureAggregatorFactory
+              .getAggregator(msrColumnEvalutorInfo.getAggregator(),
+                  msrColumnEvalutorInfo.getType());
           aggregator.merge(
               blockChunkHolder.getMeasureDataChunk()[msrColumnEvalutorInfo.getColumnIndex()]
                   .getMeasureDataHolder().getReadableByteArrayValueByIndex(index));

@@ -34,8 +34,6 @@ import java.io.OutputStreamWriter;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -76,9 +74,6 @@ import org.carbondata.query.aggregator.impl.SumDistinctDoubleAggregator;
 import org.carbondata.query.aggregator.impl.SumDistinctLongAggregator;
 import org.carbondata.query.aggregator.impl.SumDoubleAggregator;
 import org.carbondata.query.aggregator.impl.SumLongAggregator;
-import org.carbondata.query.datastorage.InMemoryLoadTableUtil;
-import org.carbondata.query.datastorage.InMemoryTable;
-import org.carbondata.query.datastorage.InMemoryTableStore;
 
 import org.pentaho.di.core.CheckResult;
 import org.pentaho.di.core.CheckResultInterface;
@@ -592,30 +587,6 @@ public final class CarbonDataProcessorUtil {
   }
 
   /**
-   * Below method will be used to get the all the slices loaded in the memory
-   * if there is no slice present then this method will load the slice first
-   * and return all the slice which will be used to for reading
-   *
-   * @param cubeUniqueName
-   * @param tableName
-   * @return List<InMemoryCube>
-   */
-  public static List<InMemoryTable> getAllLoadedSlices(String cubeUniqueName, String tableName) {
-    List<InMemoryTable> activeSlices =
-        InMemoryTableStore.getInstance().getActiveSlices(cubeUniqueName);
-    List<InMemoryTable> requiredSlices =
-        new ArrayList<InMemoryTable>(CarbonCommonConstants.CONSTANT_SIZE_TEN);
-    InMemoryTable inMemoryTable = null;
-    for (int i = 0; i < activeSlices.size(); i++) {
-      inMemoryTable = activeSlices.get(i);
-      if (null != inMemoryTable.getDataCache(tableName)) {
-        requiredSlices.add(inMemoryTable);
-      }
-    }
-    return requiredSlices;
-  }
-
-  /**
    * getMaskedByte
    *
    * @param generator
@@ -993,24 +964,6 @@ public final class CarbonDataProcessorUtil {
 
       }
     }
-  }
-
-  /**
-   * return loadName and modification timestamp map
-   */
-  public static Map<String, Long> getLoadNameAndModificationTimeMap(String[] loadNames,
-      String[] modOrDelTimes) {
-    Map<String, Long> loadNameAndModifiedOrDeletionTimeMap =
-        new HashMap<String, Long>(loadNames.length);
-    for (int i = 0; i < loadNames.length; i++) {
-      String modOrDelTimeStamp = modOrDelTimes[i];
-      Long modOrDelTimeValue = 0L;
-      if (null != modOrDelTimeStamp) {
-        modOrDelTimeValue = InMemoryLoadTableUtil.parseDeletionTime(modOrDelTimeStamp);
-      }
-      loadNameAndModifiedOrDeletionTimeMap.put(loadNames[i], modOrDelTimeValue);
-    }
-    return loadNameAndModifiedOrDeletionTimeMap;
   }
 
   /**
