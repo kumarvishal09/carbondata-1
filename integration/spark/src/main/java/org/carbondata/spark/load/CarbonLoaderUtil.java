@@ -18,9 +18,25 @@
  */
 package org.carbondata.spark.load;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.carbondata.common.logging.LogService;
 import org.carbondata.common.logging.LogServiceFactory;
@@ -59,8 +75,6 @@ import org.carbondata.processing.dataprocessor.IDataProcessStatus;
 import org.carbondata.processing.graphgenerator.GraphGenerator;
 import org.carbondata.processing.graphgenerator.GraphGeneratorException;
 import org.carbondata.processing.util.CarbonDataProcessorUtil;
-import org.carbondata.query.datastorage.InMemoryTable;
-import org.carbondata.query.datastorage.InMemoryTableStore;
 import org.carbondata.spark.merger.NodeBlockRelation;
 
 import com.google.gson.Gson;
@@ -378,16 +392,7 @@ public final class CarbonLoaderUtil {
   }
 
   public static void removeSliceFromMemory(String schemaName, String cubeName, String loadName) {
-    List<InMemoryTable> activeSlices =
-        InMemoryTableStore.getInstance().getActiveSlices(schemaName + '_' + cubeName);
-    Iterator<InMemoryTable> sliceItr = activeSlices.iterator();
-    InMemoryTable slice = null;
-    while (sliceItr.hasNext()) {
-      slice = sliceItr.next();
-      if (loadName.equals(slice.getLoadName())) {
-        sliceItr.remove();
-      }
-    }
+    // TODO: Remove from memory
   }
 
   public static void createEmptyLoadFolder(CarbonLoadModel model, String factLoadFolderLocation,
