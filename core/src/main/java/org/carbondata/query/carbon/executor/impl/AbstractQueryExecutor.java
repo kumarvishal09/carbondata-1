@@ -213,6 +213,9 @@ public abstract class AbstractQueryExecutor<E> implements QueryExecutor<E> {
       blockExecutionInfoList
           .add(getBlockExecutionInfoForBlock(queryModel, queryProperties.dataBlocks.get(i)));
     }
+    queryProperties.complexParentIndexToQueryMap =
+        blockExecutionInfoList.get(blockExecutionInfoList.size() - 1)
+            .getComplexParentIndexToQueryMap();
     return blockExecutionInfoList;
   }
 
@@ -235,7 +238,8 @@ public abstract class AbstractQueryExecutor<E> implements QueryExecutor<E> {
     // below is to get only those dimension in query which is present in the
     // table block
     List<QueryDimension> updatedQueryDimension = RestructureUtil
-        .getUpdatedQueryDimension(queryModel.getQueryDimension(), tableBlockDimensions);
+        .getUpdatedQueryDimension(queryModel.getQueryDimension(), tableBlockDimensions,
+            segmentProperties.getComplexDimensions());
     // TODO add complex dimension children
     int[] maskByteRangesForBlock =
         QueryUtil.getMaskedByteRange(updatedQueryDimension, blockKeyGenerator);
@@ -323,12 +327,12 @@ public abstract class AbstractQueryExecutor<E> implements QueryExecutor<E> {
     QueryUtil.fillQueryDimensionsBlockIndexes(updatedQueryDimension,
         segmentProperties.getDimensionOrdinalToBlockMapping(), dictionaryColumnBlockIndex,
         noDictionaryColumnBlockIndex);
-    int[] queryDictionaruColumnBlockIndexes = ArrayUtils.toPrimitive(
+    int[] queryDictionaryColumnBlockIndexes = ArrayUtils.toPrimitive(
         dictionaryColumnBlockIndex.toArray(new Integer[dictionaryColumnBlockIndex.size()]));
     // need to sort the dictionary column as for all dimension
     // column key will be filled based on key order
-    Arrays.sort(queryDictionaruColumnBlockIndexes);
-    blockExecutionInfo.setDictionaryColumnBlockIndex(queryDictionaruColumnBlockIndexes);
+    Arrays.sort(queryDictionaryColumnBlockIndexes);
+    blockExecutionInfo.setDictionaryColumnBlockIndex(queryDictionaryColumnBlockIndexes);
     // setting the no dictionary column block indexes
     blockExecutionInfo.setNoDictionaryBlockIndexes(ArrayUtils.toPrimitive(
         noDictionaryColumnBlockIndex.toArray(new Integer[noDictionaryColumnBlockIndex.size()])));
@@ -337,10 +341,17 @@ public abstract class AbstractQueryExecutor<E> implements QueryExecutor<E> {
     // setting each column value size
     blockExecutionInfo.setEachColumnValueSize(segmentProperties.getEachDimColumnValueSize());
     blockExecutionInfo.setDimensionAggregator(QueryUtil
-        .getDimensionDataAggregatorList1(queryModel.getDimAggregationInfo(),
+        .getDimensionDataAggregatorList(queryModel.getDimAggregationInfo(),
             segmentProperties.getDimensionOrdinalToBlockMapping(),
             segmentProperties.getColumnGroupAndItsKeygenartor(),
             queryProperties.columnToDictionayMapping));
+    blockExecutionInfo.setComplexParentIndexToQueryMap(QueryUtil
+        .getComplexDimensionsMap(updatedQueryDimension,
+            segmentProperties.getDimensionOrdinalToBlockMapping(),
+            segmentProperties.getEachComplexDimColumnValueSize(),
+            queryProperties.columnToDictionayMapping));
+    blockExecutionInfo.setComplexColumnParentBlockIndexes(
+        getComplexDimensionParentBlockIndexes(updatedQueryDimension));
     try {
       // to set column group and its key structure info which will be used
       // to
@@ -440,6 +451,18 @@ public abstract class AbstractQueryExecutor<E> implements QueryExecutor<E> {
     aggregatorInfos.setMeasuresAggreagators(queryProperties.measureAggregators);
     aggregatorInfos.setMeasureDataTypes(queryProperties.measureDataTypes);
     return aggregatorInfos;
+  }
+
+  private int[] getComplexDimensionParentBlockIndexes(List<QueryDimension> queryDimensions) {
+    List<Integer> parentBlockIndexList = new ArrayList<Integer>();
+    for (QueryDimension queryDimension : queryDimensions) {
+      if (CarbonUtil.hasDataType(queryDimension.getDimension().getDataType(),
+          new DataType[] { DataType.ARRAY, DataType.STRUCT, DataType.MAP })) {
+        parentBlockIndexList.add(queryDimension.getDimension().getOrdinal());
+      }
+    }
+    return ArrayUtils
+        .toPrimitive(parentBlockIndexList.toArray(new Integer[parentBlockIndexList.size()]));
   }
 
 }

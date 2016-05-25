@@ -128,6 +128,13 @@ public final class CarbonMetadata {
       if (dimension.getColumnId().equals(columnIdentifier)) {
         return dimension;
       }
+      if (dimension.numberOfChild() > 0) {
+        for (int i = 0; i < dimension.numberOfChild(); i++) {
+          if (dimension.getListOfChildDimensions().get(i).getColumnId().equals(columnIdentifier)) {
+            return dimension;
+          }
+        }
+      }
     }
     return null;
   }

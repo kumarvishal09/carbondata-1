@@ -26,6 +26,7 @@ import org.carbondata.core.carbon.datastore.block.AbstractIndex;
 import org.carbondata.core.carbon.metadata.datatype.DataType;
 import org.carbondata.query.aggregator.MeasureAggregator;
 import org.carbondata.query.carbon.executor.infos.KeyStructureInfo;
+import org.carbondata.query.complex.querytypes.GenericQueryType;
 
 /**
  * Holds all the properties required for query execution
@@ -81,4 +82,9 @@ public class QueryExecutorProperties {
    * Measure datatypes
    */
   public DataType[] measureDataTypes;
+
+  /**
+   * complex parent index to query mapping
+   */
+  protected Map<Integer, GenericQueryType> complexParentIndexToQueryMap;
 }
