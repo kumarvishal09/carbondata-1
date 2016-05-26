@@ -19,16 +19,15 @@
 
 package org.carbondata.processing.csvreaderstep;
 
+import java.io.DataInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.vfs.FileObject;
 import org.carbondata.core.constants.CarbonCommonConstants;
 import org.carbondata.core.datastorage.store.impl.FileFactory;
 import org.carbondata.core.load.BlockDetails;
-
-import org.apache.commons.vfs.FileObject;
 import org.pentaho.di.core.exception.KettleConversionException;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleFileException;
@@ -50,21 +49,23 @@ public class BlockDataHandler {
   public int startBuffer;
   public int endBuffer;
   public int bufferSize;
-  public int preferredBufferSize;
   public long bytesToSkipInFirstFile;
   public long totalBytesRead;
   public CsvInputMeta meta ;
   public CsvInputData data ;
   public boolean isNeedToSkipFirstLineInBlock;
   public long currentOffset;
+  public long fileSize;
+  public long currentLeftSize;
 
-  protected InputStream bufferedInputStream;
+  protected DataInputStream bufferedInputStream;
 
 
   public BlockDataHandler() {
     byteBuffer = new byte[] {};
     isNeedToSkipFirstLineInBlock = true;
     currentOffset = 0;
+    
   }
 
   // Resize
@@ -74,36 +75,38 @@ public class BlockDataHandler {
     // That way we can at least read one full block of data using NIO
 
     bufferSize = endBuffer - startBuffer;
-    int newSize = bufferSize + preferredBufferSize;
-    byte[] newByteBuffer = new byte[newSize + 100];
-
-    // copy over the old data...
-    System.arraycopy(byteBuffer, startBuffer, newByteBuffer, 0, bufferSize);
-
-    // replace the old byte buffer...
-    byteBuffer = newByteBuffer;
+//    int newSize = bufferSize + data.preferredBufferSize;
+//    byte[] newByteBuffer = new byte[newSize + 100];
+//
+//    // copy over the old data...
+//    System.arraycopy(byteBuffer, startBuffer, newByteBuffer, 0, bufferSize);
+//
+//    // replace the old byte buffer...
+//    byteBuffer = newByteBuffer;
 
     // Adjust start and end point of data in the byte buffer
     //
+    bufferSize=(int)(data.preferredBufferSize>currentLeftSize?currentLeftSize:data.preferredBufferSize);
     startBuffer = 0;
-    endBuffer = bufferSize;
+    endBuffer = 0;
+    byteBuffer= new byte[bufferSize];
   }
 
-  public int readBufferFromFile() throws IOException {
-    // See if the line is not longer than the buffer.
-    // In that case we need to increase the size of the byte buffer.
-    // Since this method doesn't get called every other character,
-    // I'm sure we can spend a bit of time here without major performance loss.
-    //
-
-    int read = bufferedInputStream.read(byteBuffer, endBuffer, (byteBuffer.length - endBuffer));
-    if (read >= 0) {
-      // adjust the highest used position...
-      //
-      bufferSize = endBuffer + read;
-    }
-    return read;
-  }
+	public int readBufferFromFile() throws IOException {
+		// See if the line is not longer than the buffer.
+		// In that case we need to increase the size of the byte buffer.
+		// Since this method doesn't get called every other character,
+		// I'm sure we can spend a bit of time here without major performance
+		// loss.
+		//
+		if (currentLeftSize <= 0) {
+			return -1;
+		}
+		bufferedInputStream.readFully(byteBuffer);
+		int read = byteBuffer.length;
+		currentLeftSize = currentLeftSize - read;
+		return read;
+	}
 
   /**
    * Increase the endBuffer pointer by one.<br>
@@ -176,7 +179,7 @@ public class BlockDataHandler {
       if (FileFactory.getFileType(blockDetails.getFilePath()) == FileFactory.FileType.HDFS) {
         //when case HDFS file type, we use the file path directly
         //give 0 offset as the file start offset when open a new file
-        initializeFileReader(blockDetails.getFilePath(), 0);
+        initializeFileReader(blockDetails.getFilePath(), 0, blockDetails.getBlockLength());
       } else {
         FileObject fileObject = KettleVFS.getFileObject(blockDetails.getFilePath(), transMeta);
         initializeFileReader(fileObject);
@@ -209,13 +212,15 @@ public class BlockDataHandler {
     //using file object to get path can return a valid path which for new inputstream
     String filePath = KettleVFS.getFilename(fileObject);
     this.bufferedInputStream = FileFactory.getDataInputStream(filePath,
-        FileFactory.getFileType(filePath), this.preferredBufferSize);
+        FileFactory.getFileType(filePath), data.preferredBufferSize);
     //when open a new file, need to initialize all info
-    this.byteBuffer = new byte[this.preferredBufferSize];
+    this.byteBuffer = new byte[data.preferredBufferSize];
     this.bufferSize = 0;
     this.startBuffer = 0;
     this.endBuffer = 0;
     this.currentOffset = 0;
+    this.fileSize=FileFactory.getCarbonFile(filePath, FileFactory.getFileType(filePath)).getSize();
+    currentLeftSize=fileSize;
   }
   /**
    *  skip the offset and reset the value
@@ -223,15 +228,17 @@ public class BlockDataHandler {
    * @param offset
    * @throws IOException
    */
-  protected void initializeFileReader(String filePath,long offset) throws IOException {
+  protected void initializeFileReader(String filePath,long offset, long length) throws IOException {
     if(this.bufferedInputStream != null){ this.bufferedInputStream.close();}
     this.bufferedInputStream = FileFactory.getDataInputStream(filePath,
-        FileFactory.getFileType(filePath), this.preferredBufferSize,offset);
-    this.byteBuffer = new byte[this.preferredBufferSize];
+        FileFactory.getFileType(filePath), data.preferredBufferSize,offset);
+    this.byteBuffer = new byte[data.preferredBufferSize];
     this.bufferSize = 0;
     this.startBuffer = 0;
     this.endBuffer = 0;
     this.currentOffset = 0;
+    this.fileSize=length;
+    currentLeftSize=fileSize;
   }
 
   /**

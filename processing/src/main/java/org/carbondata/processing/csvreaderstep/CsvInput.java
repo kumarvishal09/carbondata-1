@@ -35,7 +35,6 @@ import org.carbondata.core.constants.CarbonCommonConstants;
 import org.carbondata.core.load.BlockDetails;
 import org.carbondata.core.util.CarbonProperties;
 import org.carbondata.processing.graphgenerator.GraphGenerator;
-
 import org.pentaho.di.core.Const;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.logging.LogChannelInterface;
@@ -453,8 +452,11 @@ public class CsvInput extends BaseStep implements StepInterface {
             if (blockDetails.getBlockOffset() != 0
                 && blockDataHandler.isNeedToSkipFirstLineInBlock) {
               //move cursor to the block offset
-              blockDataHandler
-                  .initializeFileReader(blockDetails.getFilePath(), blockDetails.getBlockOffset());
+							blockDataHandler.initializeFileReader(
+									blockDetails.getFilePath(),
+									blockDetails.getBlockOffset(),
+									blockDetails.getBlockLength()
+											- blockDetails.getBlockOffset());
               //skip first line
               blockDataHandler.readOneRow(false);
               blockDataHandler.isNeedToSkipFirstLineInBlock = false;
