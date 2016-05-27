@@ -434,8 +434,6 @@ public class SortDataRows {
       for (int i = 0; i < entryCountLocal; i++) {
         // get row from record holder list
         row = recordHolderList[i];
-        measures = new Object[measureColCount];
-
         int fieldIndex = 0;
 
         for (int dimCount = 0; dimCount < this.dimColCount; dimCount++) {
@@ -455,27 +453,17 @@ public class SortDataRows {
             if (aggType[mesCount] == CarbonCommonConstants.SUM_COUNT_VALUE_MEASURE) {
               Double val = (Double) RemoveDictionaryUtil.getMeasure(fieldIndex, row);
               stream.writeDouble(val);
-              measures[mesCount] = val;
             } else if (aggType[mesCount] == CarbonCommonConstants.BIG_INT_MEASURE) {
               Long val = (Long) RemoveDictionaryUtil.getMeasure(fieldIndex, row);
               stream.writeLong(val);
-              measures[mesCount] = val;
             } else if (aggType[mesCount] == CarbonCommonConstants.BIG_DECIMAL_MEASURE) {
               BigDecimal val = (BigDecimal) RemoveDictionaryUtil.getMeasure(fieldIndex, row);
               byte[] bigDecimalInBytes = DataTypeUtil.bigDecimalToByte(val);
               stream.writeInt(bigDecimalInBytes.length);
               stream.write(bigDecimalInBytes);
-              measures[mesCount] = val;
             }
           } else {
             stream.write((byte) 0);
-            if (aggType[mesCount] == CarbonCommonConstants.BIG_INT_MEASURE) {
-              measures[mesCount] = 0L;
-            } else if (aggType[mesCount] == CarbonCommonConstants.BIG_DECIMAL_MEASURE) {
-              measures[mesCount] = new BigDecimal(0.0);
-            } else {
-              measures[mesCount] = 0.0;
-            }
           }
           fieldIndex++;
         }
