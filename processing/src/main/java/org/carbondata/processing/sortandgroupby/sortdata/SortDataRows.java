@@ -31,7 +31,9 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.carbondata.common.logging.LogService;
 import org.carbondata.common.logging.LogServiceFactory;
@@ -57,6 +59,11 @@ public class SortDataRows {
    * lockObject
    */
   private final Object lockObject = new Object();
+  /**
+   * cores that will used in for sorting data. At any given point the max data in memory in this
+   * step will be cores*sort_buffer_size
+   */
+  private static final int CORES_TO_BE_USED_FOR_SORTING = 3;
   /**
    * tempFileLocation
    */
@@ -165,6 +172,13 @@ public class SortDataRows {
    * This will tell whether dimension is dictionary or not.
    */
   private boolean[] noDictionaryDimnesionColumn;
+  private SortedDataHolder sortedDataHolder;
+  private ExecutorService dataSorterExecutorService;
+  private AtomicInteger totalSortDataBlocksCount = new AtomicInteger(0);
+  /**
+   * semaphore which will used for managing sorted data object arrays
+   */
+  private Semaphore semaphore;
 
   public SortDataRows(String tableName, int dimColCount, int complexDimColCount,
       int measureColCount, SortObserver observer, int noDictionaryCount, String[] measureDatatype,
@@ -221,8 +235,10 @@ public class SortDataRows {
       LOGGER.info("Sort Temp Location Already Exists");
     }
 
-    this.executorService = Executors.newFixedThreadPool(10);
-    this.writerExecutorService = Executors.newFixedThreadPool(3);
+    this.executorService = Executors.newFixedThreadPool(CORES_TO_BE_USED_FOR_SORTING);
+    this.writerExecutorService = Executors.newFixedThreadPool(1);
+    this.dataSorterExecutorService = Executors.newFixedThreadPool(CORES_TO_BE_USED_FOR_SORTING);
+    semaphore = new Semaphore(CORES_TO_BE_USED_FOR_SORTING);
     this.fileWriteBufferSize = Integer.parseInt(carbonProperties
         .getProperty(CarbonCommonConstants.CARBON_SORT_FILE_WRITE_BUFFER_SIZE,
             CarbonCommonConstants.CARBON_SORT_FILE_WRITE_BUFFER_SIZE_DEFAULT_VALUE));
@@ -295,22 +311,30 @@ public class SortDataRows {
 
         startIntermediateMerging(fileList);
       }
-
-      // create new file
-      File destFile = new File(
-          this.tempFileLocation + File.separator + this.tableName + System.nanoTime()
-              + CarbonCommonConstants.SORT_TEMP_FILE_EXT);
+      if (null == sortedDataHolder) {
+        initSortedDataHolders();
+      }
       Object[][] recordHolderListLocal = recordHolderList;
-
+      try {
+        semaphore.acquire();
+        dataSorterExecutorService.submit(new DataSorter(sortedDataHolder, recordHolderListLocal));
+        totalSortDataBlocksCount.incrementAndGet();
+      } catch (InterruptedException e) {
+        LOGGER.error(
+            "exception occurred while trying to acquire a semaphore lock: " + e.getMessage());
+        throw new CarbonSortKeyAndGroupByException(e.getMessage());
+      }
       // create the new holder Array
       this.recordHolderList = new Object[this.sortBufferSize][];
-
-      sortAndWriteToFile(destFile, recordHolderListLocal, sortBufferSize);
       this.entryCount = 0;
-
     }
-
     recordHolderList[entryCount++] = row;
+  }
+
+  private void initSortedDataHolders() {
+    sortedDataHolder = new SortedDataHolder();
+    SortedDataWriter sortedDataWriter = new SortedDataWriter(sortedDataHolder);
+    writerExecutorService.submit(sortedDataWriter);
   }
 
   /**
@@ -347,45 +371,6 @@ public class SortDataRows {
     procFiles = null;
     this.recordHolderList = null;
     startFileBasedMerge();
-  }
-
-  /**
-   * sortAndWriteToFile to write data to temp file
-   *
-   * @param destFile
-   * @throws CarbonSortKeyAndGroupByException
-   */
-  private void sortAndWriteToFile(final File destFile, final Object[][] recordHolderListLocal,
-      final int entryCountLocal) throws CarbonSortKeyAndGroupByException {
-    writerExecutorService.submit(new Callable<Void>() {
-      @Override public Void call() throws Exception {
-        String newFileName = "";
-        File finalFile = null;
-        try {
-          // sort the record holder list
-          if (noDictionaryCount > 0) {
-            Arrays.sort(recordHolderListLocal,
-                new RowComparator(noDictionaryDimnesionColumn, noDictionaryCount));
-          } else {
-            // sort the record holder list
-            Arrays.sort(recordHolderListLocal, new RowComparatorForNormalDims(dimColCount));
-          }
-
-          // write data to file
-          writeDataTofile(recordHolderListLocal, entryCountLocal, destFile);
-
-          newFileName = destFile.getAbsolutePath();
-          finalFile = new File(newFileName);
-        } catch (Throwable e) {
-          threadStatusObserver.notifyFailed(e);
-          LOGGER.error(e.getMessage());
-        }
-        synchronized (lockObject) {
-          procFiles.add(finalFile);
-        }
-        return null;
-      }
-    });
   }
 
   /**
@@ -430,7 +415,6 @@ public class SortDataRows {
       // write number of entries to the file
       stream.writeInt(entryCountLocal);
       Object[] row = null;
-      Object[] measures = null;
       for (int i = 0; i < entryCountLocal; i++) {
         // get row from record holder list
         row = recordHolderList[i];
@@ -585,8 +569,12 @@ public class SortDataRows {
     try {
       executorService.shutdown();
       executorService.awaitTermination(2, TimeUnit.DAYS);
-      writerExecutorService.shutdown();
-      writerExecutorService.awaitTermination(2, TimeUnit.DAYS);
+      dataSorterExecutorService.shutdown();
+      dataSorterExecutorService.awaitTermination(2, TimeUnit.DAYS);
+      while (totalSortDataBlocksCount.get() > 0) {
+        Thread.sleep(50);
+      }
+      writerExecutorService.shutdownNow();
     } catch (InterruptedException e) {
       throw new CarbonSortKeyAndGroupByException("Problem while shutdown the server ", e);
     }
@@ -604,6 +592,8 @@ public class SortDataRows {
      * @throws CarbonSortKeyAndGroupByException
      */
     public void notifyFailed(Throwable exception) throws CarbonSortKeyAndGroupByException {
+      totalSortDataBlocksCount.set(0);
+      dataSorterExecutorService.shutdownNow();
       writerExecutorService.shutdownNow();
       executorService.shutdownNow();
       observer.setFailed(true);
@@ -611,4 +601,98 @@ public class SortDataRows {
       throw new CarbonSortKeyAndGroupByException(exception);
     }
   }
+
+  private class SortedDataHolder {
+    List<Object[][]> recordHolderList;
+    AtomicInteger currentIndex;
+
+    public SortedDataHolder() {
+      recordHolderList = new ArrayList<>(CORES_TO_BE_USED_FOR_SORTING);
+      currentIndex = new AtomicInteger(0);
+    }
+
+    public synchronized void put(Object[][] recordHolderArray) {
+      recordHolderList.add(recordHolderArray);
+      if (!recordHolderList.isEmpty()) {
+        notifyAll();
+      }
+    }
+
+    public synchronized Object[][] get() throws InterruptedException {
+      if (recordHolderList.isEmpty()) {
+        wait();
+      }
+      Object[][] recordHolderArray = recordHolderList.get(currentIndex.get());
+      recordHolderList.remove(currentIndex.get());
+      return recordHolderArray;
+    }
+  }
+
+  private class DataSorter implements Callable<Void> {
+    private SortedDataHolder sortedDataHolder;
+    private Object[][] recordHolderArray;
+
+    public DataSorter(SortedDataHolder sortedDataHolder, Object[][] recordHolderArray) {
+      this.sortedDataHolder = sortedDataHolder;
+      this.recordHolderArray = recordHolderArray;
+    }
+
+    @Override public Void call() throws Exception {
+      try {
+        long startTime = System.currentTimeMillis();
+        if (noDictionaryCount > 0) {
+          Arrays.sort(recordHolderArray,
+              new RowComparator(noDictionaryDimnesionColumn, noDictionaryCount));
+        } else {
+          Arrays.sort(recordHolderArray, new RowComparatorForNormalDims(dimColCount));
+        }
+        sortedDataHolder.put(recordHolderArray);
+        LOGGER.info("Time taken to sort data: " + (System.currentTimeMillis() - startTime));
+      } catch (Throwable e) {
+        threadStatusObserver.notifyFailed(e);
+      }
+      return null;
+    }
+  }
+
+  private class SortedDataWriter implements Callable<Void> {
+    private SortedDataHolder sortedDataHolder;
+
+    public SortedDataWriter(SortedDataHolder sortedDataHolder) {
+      this.sortedDataHolder = sortedDataHolder;
+    }
+
+    @Override public Void call() throws Exception {
+      try {
+        while (true) {
+          try {
+            long startTime = System.currentTimeMillis();
+            Object[][] recordHolderArray = sortedDataHolder.get();
+            if (null == recordHolderArray) {
+              break;
+            }
+            // create a new file every time
+            File sortTempFile = new File(
+                tempFileLocation + File.separator + tableName + System.nanoTime()
+                    + CarbonCommonConstants.SORT_TEMP_FILE_EXT);
+            writeDataTofile(recordHolderArray, recordHolderArray.length, sortTempFile);
+            synchronized (lockObject) {
+              procFiles.add(sortTempFile);
+            }
+            totalSortDataBlocksCount.decrementAndGet();
+            LOGGER.info("Time taken to write sort temp file " + sortTempFile + " is: " + (
+                System.currentTimeMillis() - startTime));
+          } finally {
+            semaphore.release();
+          }
+        }
+      } catch (Throwable e) {
+        if (totalSortDataBlocksCount.get() > 0) {
+          threadStatusObserver.notifyFailed(e);
+        }
+      }
+      return null;
+    }
+  }
 }
+
