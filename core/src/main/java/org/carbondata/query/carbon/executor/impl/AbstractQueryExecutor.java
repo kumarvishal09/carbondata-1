@@ -284,6 +284,12 @@ public abstract class AbstractQueryExecutor<E> implements QueryExecutor<E> {
         throw new QueryExecutionException(e);
       }
     }
+    try {
+      startIndexKey = FilterUtil.prepareDefaultStartIndexKey(segmentProperties);
+      endIndexKey = FilterUtil.prepareDefaultEndIndexKey(segmentProperties);
+    } catch (KeyGenException e) {
+      throw new QueryExecutionException(e);
+    }
     blockExecutionInfo.setFileType(
         FileFactory.getFileType(queryModel.getAbsoluteTableIdentifier().getStorePath()));
     //setting the start index key of the block node

@@ -113,7 +113,14 @@ public class FilterExpressionProcessor implements FilterProcessor {
         return listOfDataBlocksToScan;
       }
     }
-
+    try {
+      // TODO need to handle for no dictionary dimensions
+      searchStartKey = FilterUtil.prepareDefaultStartIndexKey(tableSegment.getSegmentProperties());
+      // TODO need to handle for no dictionary dimensions
+      searchEndKey = FilterUtil.prepareDefaultEndIndexKey(tableSegment.getSegmentProperties());
+    } catch (KeyGenException e) {
+      return listOfDataBlocksToScan;
+    }
     LOGGER.info("Successfully retrieved the start and end key");
     long startTimeInMillis = System.currentTimeMillis();
     DataRefNodeFinder blockFinder = new BTreeDataRefNodeFinder(
@@ -129,10 +136,6 @@ public class FilterExpressionProcessor implements FilterProcessor {
 
     addBlockBasedOnMinMaxValue(filterResolver, listOfDataBlocksToScan, endBlock,
         tableSegment.getSegmentProperties());
-    if (listOfDataBlocksToScan.isEmpty()) {
-      //Pass the first block itself for applying filters.
-      listOfDataBlocksToScan.add(firstnode);
-    }
     LOGGER.info("Total Time in retrieving the data reference node" + "after scanning the btree " + (
         System.currentTimeMillis() - startTimeInMillis)
         + " Total number of data reference node for executing filter(s) " + listOfDataBlocksToScan
