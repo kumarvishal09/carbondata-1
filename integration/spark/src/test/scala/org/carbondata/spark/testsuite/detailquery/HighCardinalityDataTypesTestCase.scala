@@ -169,16 +169,16 @@ class NO_DICTIONARY_COL_TestCase extends QueryTest with BeforeAndAfterAll {
   test("Sum Query with NO_DICTIONARY_COLUMN  Compare With HIVE RESULT") {
 
     checkAnswer(
-      sql("select sum(distinct empno) from NO_DICTIONARY_HIVE_6"),
-      sql("select sum(distinct empno) from NO_DICTIONARY_CARBON_6")
+      sql("select sum(empno) from NO_DICTIONARY_HIVE_6"),
+      sql("select sum(empno) from NO_DICTIONARY_CARBON_6")
     )
   }
   
   test("average Query with NO_DICTIONARY_COLUMN  Compare With HIVE RESULT") {
 
     checkAnswer(
-      sql("select avg(distinct empno) from NO_DICTIONARY_HIVE_6"),
-      sql("select avg(distinct empno) from NO_DICTIONARY_CARBON_6")
+      sql("select avg(empno) from NO_DICTIONARY_HIVE_6"),
+      sql("select avg(empno) from NO_DICTIONARY_CARBON_6")
     )
   }
 
