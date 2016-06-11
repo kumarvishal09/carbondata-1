@@ -111,7 +111,7 @@ public class VariableLengthDimensionAggregator implements DimensionDataAggregato
     // if data type is string then convert to double data type and then apply aggregate
     // function
     if (numberTypeAggregatorIndex.length > 0) {
-      if (dimensionAggeragtorInfo.getDim().getDataType().equals(DataType.STRING)) {
+      if (DataType.STRING==dimensionAggeragtorInfo.getDim().getDataType()) {
         dataBasedOnDataType = DataTypeUtil.getDataBasedOnDataType(data, DataType.DOUBLE);
       }
       if (null == dataBasedOnDataType) {
