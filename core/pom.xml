@@ -70,6 +70,13 @@
         </exclusion>
       </exclusions>
     </dependency>
+    <dependency> 
+        <groupId>jdk.tools</groupId> 
+        <artifactId>jdk.tools</artifactId> 
+        <version> ${JAVA.VERSION}</version>
+        <scope>system</scope> 
+        <systemPath>${JAVA_HOME}/lib/tools.jar</systemPath> 
+        </dependency>
     <dependency>
       <groupId>eigenbase</groupId>
       <artifactId>eigenbase-properties</artifactId>

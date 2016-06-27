@@ -34,6 +34,7 @@ object InitForExamples {
   val hiveMetaPath = currentPath + "/target/hivemetadata"
 
   def createCarbonContext(appName: String): CarbonContext = {
+//    System.setProperty("fs.local.block.size","1073741824")
     val sc = new SparkContext(new SparkConf()
       .setAppName(appName)
       .setMaster("local[2]"))
@@ -43,7 +44,8 @@ object InitForExamples {
     cc.setConf("carbon.kettle.home", kettleHome)
     cc.setConf("hive.metastore.warehouse.dir", hiveMetaPath)
     cc.setConf(HiveConf.ConfVars.HIVECHECKFILEFORMAT.varname, "false")
-
+//    cc.setConf("fs.local.block.size","1073741824")
+    
     // whether use table split partition
     // true -> use table split partition, support multiple partition loading
     // false -> use node split partition, support data load by host partition

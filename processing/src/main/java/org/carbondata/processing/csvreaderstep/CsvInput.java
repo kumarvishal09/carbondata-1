@@ -20,6 +20,7 @@ package org.carbondata.processing.csvreaderstep;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -33,7 +34,6 @@ import org.carbondata.core.constants.CarbonCommonConstants;
 import org.carbondata.core.load.BlockDetails;
 import org.carbondata.core.util.CarbonProperties;
 import org.carbondata.processing.graphgenerator.GraphGenerator;
-
 import org.pentaho.di.core.Const;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.logging.LogChannelInterface;
@@ -337,7 +337,7 @@ public class CsvInput extends BaseStep implements StepInterface {
     } catch (NumberFormatException exc) {
       numberOfNodes = NUM_CORES_DEFAULT_VAL;
     }
-    //    numberOfNodes=1;
+    numberOfNodes=1;
     BlockDetails[] blocksInfo = GraphGenerator.blockInfo.get(meta.getBlocksID());
     if (blocksInfo.length == 0) {
       //if isDirectLoad = true, and partition number > file num
@@ -422,15 +422,24 @@ public class CsvInput extends BaseStep implements StepInterface {
       blocksListForProcess = threadBlockList.get(threadBlockList.size() - 1);
       threadBlockList.remove(threadBlockList.size() - 1);
     }
+    Collections.sort(blocksListForProcess);
     UnivocityCsvParser parser = new UnivocityCsvParser(getParserVo(blocksListForProcess));
     try {
       parser.initialize();
+      int counter=0;
       while (parser.hasMoreRecords()) {
         String[] next = parser.getNextRecord();
+        if(next.length<meta.getInputFields().length)
+        {
+        	System.out.println();
+        	continue;
+        }
         synchronized (putRowLock) {
+        	counter++;
           putRow(data.outputRowMeta, next);
         }
       }
+      System.out.println(counter);
     } catch (IOException e) {
       throw new RuntimeException(e);
     } catch (KettleException e) {

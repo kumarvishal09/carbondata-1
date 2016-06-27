@@ -21,99 +21,182 @@ package org.carbondata.processing.csvreaderstep;
 import java.io.IOException;
 import java.io.InputStream;
 
+import org.carbondata.core.datastorage.store.impl.FileFactory;
+import org.carbondata.core.datastorage.store.impl.FileFactory.FileType;
+
 /**
- * Decorator over input stream which will be used to
- * read the data from. It is a size based stream which
- * can be used to read the file until limit is reached
+ * Decorator over input stream which will be used to read the data from. It is a
+ * size based stream which can be used to read the file until limit is reached
  */
 public class LimitBasedInputStream extends InputStream {
 
-  /**
-   * steam which will be used to
-   * read the data from file
-   */
-  private InputStream in;
+	private static final byte END_OF_LINE_BYTE_VALUE = (byte) '\n';
+	/**
+	 * steam which will be used to read the data from file
+	 */
+	private InputStream in;
 
-  /**
-   * maximum number of bytes this stream can read
-   */
-  private long maximumBytesToRead;
+	/**
+	 * maximum number of bytes this stream can read
+	 */
+	private long maxNumberOfBytesToRead;
 
-  /**
-   * current byte read
-   */
-  private long currentBytesRead;
+	/**
+	 * current byte read
+	 */
+	private long currentBytesRead;
 
-  public LimitBasedInputStream(InputStream in, long maxBytesToRead) {
-    this.in = in;
-    this.maximumBytesToRead = maxBytesToRead;
-  }
+	private byte[] data;
 
-  /**
-   * Method to read the data byte by byte
-   *
-   * @return number of actual bytes read
-   */
-  @Override public int read() throws IOException {
-    if (currentBytesRead >= maximumBytesToRead) {
-      return -1;
-    }
-    int b = in.read();
-    if (b != -1) {
-      currentBytesRead++;
-    }
-    return b;
-  }
+	private boolean isFirst;
 
-  /**
-   * Below method will be used to read the data from stream
-   * it will keep track of how many byte it has read, when threshold is
-   * reach it will return -1
-   *
-   * @param buffer buffer to be filled
-   * @return number of actual bytes read
-   */
-  @Override public int read(byte[] b) throws IOException {
-    return this.read(b, 0, b.length);
-  }
+	private boolean needToReadExtraLine;
+	
+	public static void main(String[] args) throws IOException {
+		
+		LimitBasedInputStream limitBasedInputStream = new LimitBasedInputStream(33554432, true);
+		limitBasedInputStream.initialize(50000, 33554432, "D:/OsconData/20160515/001001.csv");
+		
+		byte[] b = new byte[50000];
+		while(true)
+		{
+			int read = limitBasedInputStream.read(b, 0, 50000);
+		    if(read==-1)
+		    {
+		    	break;
+		    }
+		}
+		
+	}
+	public LimitBasedInputStream(long maxNumberOfBytesToRead,
+			boolean needToReadExtraLine) {
+		this.maxNumberOfBytesToRead = maxNumberOfBytesToRead;
+		this.needToReadExtraLine = needToReadExtraLine;
+	}
 
-  /**
-   * Below method will be used to read the data from stream
-   * it will keep track of how many byte it has read, when threshold is
-   * reach it will break
-   *
-   * @param buffer buffer to be filled
-   * @param offset position from which data will be filled in the buffer
-   * @param len    number of bytes to be read
-   * @return number of actual bytes read
-   */
-  @Override public int read(byte[] buffer, int off, int len) throws IOException {
-    // if max number of bytes assigned to this stream is reached then return -1
-    // to specify no more bytes is present in file
-    if (currentBytesRead == maximumBytesToRead) {
-      return -1;
-    }
-    // number of bytes left
-    long bytesLeft = getBytesLeft();
-    if (len > bytesLeft) {
-      len = (int) bytesLeft;
-    }
-    int bytesJustRead = in.read(buffer, off, len);
-    currentBytesRead += bytesJustRead;
-    return bytesJustRead;
-  }
+	public void initialize(int bufferSize, long offset, String path)
+			throws IOException {
+		FileType fileType = FileFactory.getFileType(path);
+		if (offset != 0) {
+			isFirst = true;
+			offset = offset - 1;
+		}
+		in = FileFactory.getDataInputStream(path, fileType, bufferSize, offset);
+		if (offset == 0) {
+			return;
+		}
+		boolean isFound = false;
+		int counter = 0;
+		int read = 0;
+		data = new byte[1000];
+		int numberOfBytesToSkip=0;
+		while (true) {
+			read = in.read(data, 0, 1000);
+			counter = 0;
+			while (counter < read) {
+				if (data[counter++] == END_OF_LINE_BYTE_VALUE) {
+					isFound = true;
+					break;
+				}
+				numberOfBytesToSkip++;
+			}
+			if (isFound) {
+				break;
+			}
+		}
+		byte[] newData = new byte[read - counter];
+		System.arraycopy(data, counter, newData, 0, newData.length);
+		data = newData;
+		maxNumberOfBytesToRead=maxNumberOfBytesToRead-numberOfBytesToSkip;
+	}
 
-  /**
-   * method to close the stream
-   */
-  @Override public void close() throws IOException {
-    in.close();
-  }
+	/**
+	 * Below method will be used to read the data from stream it will keep track
+	 * of how many byte it has read, when threshold is reach it will break
+	 *
+	 * @param buffer
+	 *            buffer to be filled
+	 * @param offset
+	 *            position from which data will be filled in the buffer
+	 * @param len
+	 *            number of bytes to be read
+	 * @return number of actual bytes read
+	 */
+	@Override
+	public int read(byte[] buffer, int off, int len) throws IOException {
+		if (isFirst) {
+			isFirst = false;
+			System.arraycopy(data, 0, buffer, off, data.length);
+			return data.length;
+		}
+		// if max number of bytes assigned to this stream is reached then return
+		// -1
+		// to specify no more bytes is present in file
+		if (currentBytesRead == maxNumberOfBytesToRead) {
+			if (needToReadExtraLine) {
+				int counter = 0;
+				int read = 0;
+				data = new byte[1000];
+				read = in.read(data, 0, 1000);
+				counter = 0;
+				while (counter < read) {
+					if (data[counter++] == END_OF_LINE_BYTE_VALUE) {
+						needToReadExtraLine = false;
+						break;
+					}
+				}
+				System.arraycopy(data, 0, buffer, off, counter);
+				return counter;
+			}
+			return -1;
+		}
+		// number of bytes left
+		long bytesLeft = getBytesLeft();
+		if (len > bytesLeft) {
+			len = (int) bytesLeft;
+		}
+		int bytesJustRead = in.read(buffer, off, len);
+		currentBytesRead += bytesJustRead;
+		return bytesJustRead;
+	}
 
-  /**
-   * @return number of bytes available for reading
-   */
-  public long getBytesLeft() {
-    return maximumBytesToRead - currentBytesRead;
-  }
+	/**
+	 * method to close the stream
+	 */
+	@Override
+	public void close() throws IOException {
+		in.close();
+	}
+
+	/**
+	 * @return number of bytes available for reading
+	 */
+	public long getBytesLeft() {
+		return maxNumberOfBytesToRead - currentBytesRead;
+	}
+
+	/**
+	 * Method to read the data byte by byte
+	 *
+	 * @return number of actual bytes read
+	 */
+	@Override
+	public int read() throws IOException {
+		throw new UnsupportedOperationException(
+				"Below operation is not supported");
+	}
+
+	/**
+	 * Below method will be used to read the data from stream it will keep track
+	 * of how many byte it has read, when threshold is reach it will return -1
+	 *
+	 * @param buffer
+	 *            buffer to be filled
+	 * @return number of actual bytes read
+	 */
+	@Override
+	public int read(byte[] b) throws IOException {
+		throw new UnsupportedOperationException(
+				"Below operation is not supported");
+	}
 }

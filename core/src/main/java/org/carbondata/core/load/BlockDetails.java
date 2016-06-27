@@ -26,7 +26,7 @@ import org.carbondata.core.datastorage.store.impl.FileFactory;
 /**
  * blocks info
  */
-public class BlockDetails implements Serializable {
+public class BlockDetails implements Serializable, Comparable<BlockDetails> {
 
   /**
    * serialization version
@@ -68,5 +68,17 @@ public class BlockDetails implements Serializable {
   public void setFilePath(String filePath) {
     this.filePath = filePath;
   }
+
+@Override
+public int compareTo(BlockDetails o) {
+	if(blockOffset>o.blockOffset)
+	{
+		return 1;
+	}
+	else if(blockOffset<o.blockOffset){
+		return -1;
+	}
+	return 0;
+}
 
 }

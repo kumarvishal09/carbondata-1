@@ -340,51 +340,51 @@ public class GraphGenerator {
       selectValueToChangeTheDataType = getSelectValueToChangeTheDataType(configurationInfo, 1);
     }
 
-    carbonSurrogateKeyStep = getCarbonCSVBasedSurrogateKeyStep(configurationInfo);
-    StepMeta sortStep = getSortStep(configurationInfo);
-    StepMeta carbonMDKeyStep = getMDKeyStep(configurationInfo);
-    StepMeta carbonSliceMergerStep = null;
-    carbonSliceMergerStep = getSliceMeregerStep(configurationInfo, configurationInfoForFact);
+//    carbonSurrogateKeyStep = getCarbonCSVBasedSurrogateKeyStep(configurationInfo);
+//    StepMeta sortStep = getSortStep(configurationInfo);
+//    StepMeta carbonMDKeyStep = getMDKeyStep(configurationInfo);
+//    StepMeta carbonSliceMergerStep = null;
+//    carbonSliceMergerStep = getSliceMeregerStep(configurationInfo, configurationInfoForFact);
 
     // add all steps to trans
     trans.addStep(inputStep);
 
-    if (!isCSV) {
-      trans.addStep(selectValueToChangeTheDataType);
-    }
-
-    trans.addStep(carbonSurrogateKeyStep);
-    trans.addStep(sortStep);
-    trans.addStep(carbonMDKeyStep);
-
-    trans.addStep(carbonSliceMergerStep);
-    TransHopMeta inputStepToSelectValueHop = null;
-    TransHopMeta tableInputToSelectValue = null;
-
-    if (isCSV) {
-      inputStepToSelectValueHop = new TransHopMeta(inputStep, carbonSurrogateKeyStep);
-    } else {
-      inputStepToSelectValueHop = new TransHopMeta(inputStep, selectValueToChangeTheDataType);
-      tableInputToSelectValue =
-          new TransHopMeta(selectValueToChangeTheDataType, carbonSurrogateKeyStep);
-    }
-
-    // create hop
-    TransHopMeta surrogateKeyToSortHop = new TransHopMeta(carbonSurrogateKeyStep, sortStep);
-    TransHopMeta sortToMDKeyHop = new TransHopMeta(sortStep, carbonMDKeyStep);
-    TransHopMeta mdkeyToSliceMerger = null;
-    mdkeyToSliceMerger = new TransHopMeta(carbonMDKeyStep, carbonSliceMergerStep);
-
-    if (isCSV) {
-      trans.addTransHop(inputStepToSelectValueHop);
-    } else {
-      trans.addTransHop(inputStepToSelectValueHop);
-      trans.addTransHop(tableInputToSelectValue);
-    }
-
-    trans.addTransHop(surrogateKeyToSortHop);
-    trans.addTransHop(sortToMDKeyHop);
-    trans.addTransHop(mdkeyToSliceMerger);
+//    if (!isCSV) {
+//      trans.addStep(selectValueToChangeTheDataType);
+//    }
+//
+//    trans.addStep(carbonSurrogateKeyStep);
+//    trans.addStep(sortStep);
+//    trans.addStep(carbonMDKeyStep);
+//
+//    trans.addStep(carbonSliceMergerStep);
+//    TransHopMeta inputStepToSelectValueHop = null;
+//    TransHopMeta tableInputToSelectValue = null;
+//
+//    if (isCSV) {
+//      inputStepToSelectValueHop = new TransHopMeta(inputStep, carbonSurrogateKeyStep);
+//    } else {
+//      inputStepToSelectValueHop = new TransHopMeta(inputStep, selectValueToChangeTheDataType);
+//      tableInputToSelectValue =
+//          new TransHopMeta(selectValueToChangeTheDataType, carbonSurrogateKeyStep);
+//    }
+//
+//    // create hop
+//    TransHopMeta surrogateKeyToSortHop = new TransHopMeta(carbonSurrogateKeyStep, sortStep);
+//    TransHopMeta sortToMDKeyHop = new TransHopMeta(sortStep, carbonMDKeyStep);
+//    TransHopMeta mdkeyToSliceMerger = null;
+//    mdkeyToSliceMerger = new TransHopMeta(carbonMDKeyStep, carbonSliceMergerStep);
+//
+//    if (isCSV) {
+//      trans.addTransHop(inputStepToSelectValueHop);
+//    } else {
+//      trans.addTransHop(inputStepToSelectValueHop);
+//      trans.addTransHop(tableInputToSelectValue);
+//    }
+//
+//    trans.addTransHop(surrogateKeyToSortHop);
+//    trans.addTransHop(sortToMDKeyHop);
+//    trans.addTransHop(mdkeyToSliceMerger);
 
     String graphFilePath =
         outputLocation + File.separator + schemaInfo.getSchemaName() + File.separator
