@@ -64,11 +64,11 @@ import org.carbondata.query.carbon.model.DimensionAggregatorInfo;
 import org.carbondata.query.carbon.model.QueryDimension;
 import org.carbondata.query.carbon.model.QueryMeasure;
 import org.carbondata.query.carbon.model.QueryModel;
-import org.carbondata.query.filter.resolver.resolverinfo.DimColumnResolvedFilterInfo;
 import org.carbondata.query.complex.querytypes.ArrayQueryType;
 import org.carbondata.query.complex.querytypes.GenericQueryType;
 import org.carbondata.query.complex.querytypes.PrimitiveQueryType;
 import org.carbondata.query.complex.querytypes.StructQueryType;
+import org.carbondata.query.filter.resolver.resolverinfo.DimColumnResolvedFilterInfo;
 
 import org.apache.commons.lang3.ArrayUtils;
 

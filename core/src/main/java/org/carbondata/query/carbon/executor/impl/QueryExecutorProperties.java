@@ -86,5 +86,5 @@ public class QueryExecutorProperties {
   /**
    * complex parent index to query mapping
    */
-  protected Map<Integer, GenericQueryType> complexParentIndexToQueryMap;
+  public Map<Integer, GenericQueryType> complexParentIndexToQueryMap;
 }

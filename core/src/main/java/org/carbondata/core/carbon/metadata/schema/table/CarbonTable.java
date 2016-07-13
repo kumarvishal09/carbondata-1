@@ -203,24 +203,10 @@ public class CarbonTable implements Serializable {
   }
 
   /**
-   * @param databaseName
-   */
-  public void setDatabaseName(String databaseName) {
-    this.databaseName = databaseName;
-  }
-
-  /**
    * @return the tabelName
    */
   public String getFactTableName() {
     return absoluteTableIdentifier.getCarbonTableIdentifier().getTableName();
-  }
-
-  /**
-   * @param factTableName
-   */
-  public void setFactTableName(String factTableName) {
-    this.factTableName = factTableName;
   }
 
   /**
