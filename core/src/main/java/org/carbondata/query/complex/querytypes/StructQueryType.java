@@ -149,7 +149,7 @@ public class StructQueryType extends ComplexQueryType implements GenericQueryTyp
   @Override public DataType getSchemaType() {
     StructField[] fields = new StructField[children.size()];
     for (int i = 0; i < children.size(); i++) {
-      fields[i] = new StructField(children.get(i).getName(), children.get(i).getSchemaType(), true,
+      fields[i] = new StructField(children.get(i).getName(), null, true,
           Metadata.empty());
     }
     return new StructType(fields);

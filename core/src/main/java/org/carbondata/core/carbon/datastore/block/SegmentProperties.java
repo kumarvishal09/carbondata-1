@@ -231,10 +231,7 @@ public class SegmentProperties {
     while (index < complexDimensions.size()) {
       dimension = complexDimensions.get(index);
       dimensionOrdinalToBlockMapping.put(dimension.getOrdinal(), ++blockOrdinal);
-      for (int i = 0; i < dimension.numberOfChild(); i++) {
-        dimensionOrdinalToBlockMapping
-            .put(dimension.getListOfChildDimensions().get(i).getOrdinal(), ++blockOrdinal);
-      }
+      blockOrdinal = fillComplexDimensionChildBlockIndex(blockOrdinal, dimension);
       index++;
     }
     fillBlockToDimensionOrdinalMapping();
@@ -255,6 +252,27 @@ public class SegmentProperties {
       }
       dimensionOrdinals.add(block.getKey());
     }
+  }
+
+  /**
+   * Below method will be used to add the complex dimension child
+   * block index.It is a recursive method which will be get the children
+   * add the block index
+   *
+   * @param blockOrdinal start block ordinal
+   * @param dimension    parent dimension
+   * @return last block index
+   */
+  private int fillComplexDimensionChildBlockIndex(int blockOrdinal, CarbonDimension dimension) {
+    for (int i = 0; i < dimension.numberOfChild(); i++) {
+      dimensionOrdinalToBlockMapping
+          .put(dimension.getListOfChildDimensions().get(i).getOrdinal(), ++blockOrdinal);
+      if (dimension.getListOfChildDimensions().get(i).numberOfChild() > 0) {
+        blockOrdinal = fillComplexDimensionChildBlockIndex(blockOrdinal,
+            dimension.getListOfChildDimensions().get(i));
+      }
+    }
+    return blockOrdinal;
   }
 
   /**

@@ -248,33 +248,38 @@ public class QueryUtil {
       blockIndex =
           dimensionOrdinalToBlockMapping.get(queryDimensions.get(i).getDimension().getOrdinal());
       dimensionBlockIndex.add(blockIndex);
-      addChildrenBlockIndex(queryDimensions.get(i).getDimension().numberOfChild(), blockIndex,
-          dimensionBlockIndex);
+      addChildrenBlockIndex(blockIndex, dimensionBlockIndex, queryDimensions.get(i).getDimension());
     }
     for (int i = 0; i < dimAggInfo.size(); i++) {
       blockIndex = dimensionOrdinalToBlockMapping.get(dimAggInfo.get(i).getDim().getOrdinal());
       dimensionBlockIndex.add(blockIndex);
-      addChildrenBlockIndex(dimAggInfo.get(i).getDim().numberOfChild(), blockIndex,
-          dimensionBlockIndex);
+      addChildrenBlockIndex(blockIndex, dimensionBlockIndex, dimAggInfo.get(i).getDim());
+
     }
     for (int i = 0; i < customAggregationDimension.size(); i++) {
       blockIndex =
           dimensionOrdinalToBlockMapping.get(customAggregationDimension.get(i).getOrdinal());
       dimensionBlockIndex.add(blockIndex);
-      addChildrenBlockIndex(customAggregationDimension.get(i).numberOfChild(), blockIndex,
-          dimensionBlockIndex);
+      addChildrenBlockIndex(blockIndex, dimensionBlockIndex, customAggregationDimension.get(i));
     }
     return ArrayUtils
         .toPrimitive(dimensionBlockIndex.toArray(new Integer[dimensionBlockIndex.size()]));
   }
 
-  private static void addChildrenBlockIndex(int numberOfChildren, int startBlockIndex,
-      Set<Integer> blockIndexList) {
-    if (numberOfChildren == 0) {
-      return;
-    }
-    for (int i = startBlockIndex + 1; i <= numberOfChildren + startBlockIndex; i++) {
-      blockIndexList.add(i);
+  /**
+   * Below method will be used to add the children block index
+   * this will be basically for complex dimension which will have children
+   *
+   * @param startBlockIndex start block index
+   * @param blockIndexList  block index list
+   * @param dimension       parent dimension
+   */
+  private static void addChildrenBlockIndex(int startBlockIndex, Set<Integer> blockIndexList,
+      CarbonDimension dimension) {
+    for (int i = 0; i < dimension.numberOfChild(); i++) {
+      blockIndexList.add(++startBlockIndex);
+      addChildrenBlockIndex(startBlockIndex, blockIndexList,
+          dimension.getListOfChildDimensions().get(i));
     }
   }
 
@@ -315,11 +320,8 @@ public class QueryUtil {
           dictionaryDimensionFromQuery.add(queryDimensions.get(i).getDimension().getColumnId());
         }
         if (queryDimensions.get(i).getDimension().numberOfChild() > 0) {
-          for (int j = 0; j < queryDimensions.get(i).getDimension().numberOfChild(); j++) {
-            dictionaryDimensionFromQuery.add(
-                queryDimensions.get(i).getDimension().getListOfChildDimensions().get(j)
-                    .getColumnId());
-          }
+          getChildDimensionDictionaryDetail(queryDimensions.get(i).getDimension(),
+              dictionaryDimensionFromQuery);
         }
       }
     }
@@ -350,6 +352,25 @@ public class QueryUtil {
         new ArrayList<String>(dictionaryDimensionFromQuery.size());
     dictionaryColumnIdList.addAll(dictionaryDimensionFromQuery);
     return getDictionaryMap(dictionaryColumnIdList, absoluteTableIdentifier);
+  }
+
+  /**
+   * Below method will be used to fill the children dimension column id
+   *
+   * @param queryDimensions              query dimension
+   * @param dictionaryDimensionFromQuery dictionary dimension for query
+   */
+  private static void getChildDimensionDictionaryDetail(CarbonDimension queryDimensions,
+      Set<String> dictionaryDimensionFromQuery) {
+    for (int j = 0; j < queryDimensions.numberOfChild(); j++) {
+      if (queryDimensions.getListOfChildDimensions().get(j).numberOfChild() > 0) {
+        getChildDimensionDictionaryDetail(queryDimensions.getListOfChildDimensions().get(j),
+            dictionaryDimensionFromQuery);
+      } else {
+        dictionaryDimensionFromQuery
+            .add(queryDimensions.getListOfChildDimensions().get(j).getColumnId());
+      }
+    }
   }
 
   /**
@@ -1001,30 +1022,42 @@ public class QueryUtil {
                   dimension.getDimension().getColName(),
                   dimensionToBlockIndexMap.get(dimension.getDimension().getOrdinal()));
       complexTypeMap.put(dimension.getDimension().getOrdinal(), parentQueryType);
-      for (int i = 0; i < dimension.getDimension().getNumberOfChild(); i++) {
-        switch (dimension.getDimension().getListOfChildDimensions().get(i).getDataType()) {
-          case ARRAY:
-            parentQueryType.addChildren(new ArrayQueryType(
-                dimension.getDimension().getListOfChildDimensions().get(i).getColName(),
-                dimension.getDimension().getColName(), ++parentBlockIndex));
-            break;
-          case STRUCT:
-            parentQueryType.addChildren(new StructQueryType(
-                dimension.getDimension().getListOfChildDimensions().get(i).getColName(),
-                dimension.getDimension().getColName(), ++parentBlockIndex));
-            break;
-          default:
-            parentQueryType.addChildren(new PrimitiveQueryType(
-                dimension.getDimension().getListOfChildDimensions().get(i).getColName(),
-                dimension.getDimension().getColName(), ++parentBlockIndex,
-                dimension.getDimension().getListOfChildDimensions().get(i).getDataType(),
-                eachComplexColumnValueSize[dimension.getDimension().getListOfChildDimensions()
-                    .get(i).getComplexTypeOrdinal()], columnIdToDictionaryMap
-                .get(dimension.getDimension().getListOfChildDimensions().get(i).getColumnId())));
-        }
-
-      }
+      parentBlockIndex = fillChildrenRecursive(eachComplexColumnValueSize, columnIdToDictionaryMap,
+          parentBlockIndex, dimension.getDimension(), parentQueryType);
     }
     return complexTypeMap;
+  }
+
+  private static int fillChildrenRecursive(int[] eachComplexColumnValueSize,
+      Map<String, Dictionary> columnIdToDictionaryMap, int parentBlockIndex,
+      CarbonDimension dimension, GenericQueryType parentQueryType) {
+    for (int i = 0; i < dimension.getNumberOfChild(); i++) {
+      switch (dimension.getListOfChildDimensions().get(i).getDataType()) {
+        case ARRAY:
+          parentQueryType.addChildren(
+              new ArrayQueryType(dimension.getListOfChildDimensions().get(i).getColName(),
+                  dimension.getColName(), ++parentBlockIndex));
+          break;
+        case STRUCT:
+          parentQueryType.addChildren(
+              new StructQueryType(dimension.getListOfChildDimensions().get(i).getColName(),
+                  dimension.getColName(), ++parentBlockIndex));
+          break;
+        default:
+          parentQueryType.addChildren(
+              new PrimitiveQueryType(dimension.getListOfChildDimensions().get(i).getColName(),
+                  dimension.getColName(), ++parentBlockIndex,
+                  dimension.getListOfChildDimensions().get(i).getDataType(),
+                  eachComplexColumnValueSize[dimension.getListOfChildDimensions().get(i)
+                      .getComplexTypeOrdinal()], columnIdToDictionaryMap
+                  .get(dimension.getListOfChildDimensions().get(i).getColumnId())));
+      }
+      if (dimension.getListOfChildDimensions().get(i).getNumberOfChild() > 0) {
+        parentBlockIndex =
+            fillChildrenRecursive(eachComplexColumnValueSize, columnIdToDictionaryMap,
+                parentBlockIndex, dimension.getListOfChildDimensions().get(i), parentQueryType);
+      }
+    }
+    return parentBlockIndex;
   }
 }

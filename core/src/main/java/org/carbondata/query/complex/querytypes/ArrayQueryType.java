@@ -127,7 +127,7 @@ public class ArrayQueryType extends ComplexQueryType implements GenericQueryType
   }
 
   @Override public DataType getSchemaType() {
-    return new ArrayType(children.getSchemaType(), true);
+    return new ArrayType(null, true);
   }
 
   @Override public int getKeyOrdinalForQuery() {
