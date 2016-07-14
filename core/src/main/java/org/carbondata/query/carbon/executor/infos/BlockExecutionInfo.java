@@ -686,16 +686,16 @@ public class BlockExecutionInfo {
   /**
    * @return the complexParentIndexToQueryMap
    */
-  public Map<Integer, GenericQueryType> getComplexParentIndexToQueryMap() {
+  public Map<Integer, GenericQueryType> getComlexDimensionInfoMap() {
     return complexParentIndexToQueryMap;
   }
 
   /**
-   * @param complexParentIndexToQueryMap the complexParentIndexToQueryMap to set
+   * @param complexDimensionInfoMap the complexParentIndexToQueryMap to set
    */
-  public void setComplexParentIndexToQueryMap(
-      Map<Integer, GenericQueryType> complexParentIndexToQueryMap) {
-    this.complexParentIndexToQueryMap = complexParentIndexToQueryMap;
+  public void setComplexDimensionInfoMap(
+      Map<Integer, GenericQueryType> complexDimensionInfoMap) {
+    this.complexParentIndexToQueryMap = complexDimensionInfoMap;
   }
 
   /**

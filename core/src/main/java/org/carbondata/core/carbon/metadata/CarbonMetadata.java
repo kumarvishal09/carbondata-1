@@ -151,7 +151,7 @@ public final class CarbonMetadata {
       CarbonDimension dimension) {
     for (int i = 0; i < dimension.numberOfChild(); i++) {
       if (dimension.getListOfChildDimensions().get(i).getColumnId().equals(columnIdentifier)) {
-        return dimension;
+        return dimension.getListOfChildDimensions().get(i);
       } else if (dimension.getListOfChildDimensions().get(i).numberOfChild() > 0) {
         CarbonDimension childDim = getCarbonChildDimsBasedOnColIdentifier(columnIdentifier,
             dimension.getListOfChildDimensions().get(i));

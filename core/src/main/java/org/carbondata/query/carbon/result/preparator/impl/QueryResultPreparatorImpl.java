@@ -104,7 +104,7 @@ public class QueryResultPreparatorImpl
               queryDimension.get(i).getDimension().getDataType());
         } else if (CarbonUtil.hasDataType(queryDimension.get(i).getDimension().getDataType(),
             new DataType[] { DataType.ARRAY, DataType.STRUCT, DataType.MAP })) {
-          resultData[currentRow][i] = queryExecuterProperties.complexParentIndexToQueryMap
+          resultData[currentRow][i] = queryExecuterProperties.complexDimensionInfoMap
               .get(queryDimension.get(i).getDimension().getOrdinal())
               .getDataBasedOnDataTypeFromSurrogates(
                   ByteBuffer.wrap(key.getComplexTypeByIndex(complexTypeColumnIndex++)));

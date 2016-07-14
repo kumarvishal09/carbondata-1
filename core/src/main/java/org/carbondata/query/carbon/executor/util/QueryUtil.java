@@ -68,6 +68,10 @@ import org.carbondata.query.complex.querytypes.ArrayQueryType;
 import org.carbondata.query.complex.querytypes.GenericQueryType;
 import org.carbondata.query.complex.querytypes.PrimitiveQueryType;
 import org.carbondata.query.complex.querytypes.StructQueryType;
+import org.carbondata.query.expression.ColumnExpression;
+import org.carbondata.query.expression.Expression;
+import org.carbondata.query.expression.logical.BinaryLogicalExpression;
+import org.carbondata.query.filter.resolver.FilterResolverIntf;
 import org.carbondata.query.filter.resolver.resolverinfo.DimColumnResolvedFilterInfo;
 
 import org.apache.commons.lang3.ArrayUtils;
@@ -294,6 +298,9 @@ public class QueryUtil {
    *                                for aggregation
    * @param customAggExpression     dimension which is present in the expression for aggregation
    *                                we need dictionary data
+   * @param filterComplexDimensions complex dimension which is present in filter.As for complex
+   *                                dimension we need to create the complex dimension info map
+   *                                for creating that info we need dictionary details.
    * @param absoluteTableIdentifier absolute table identifier
    * @return dimension unique id to its dictionary map
    * @throws QueryExecutionException
@@ -301,7 +308,8 @@ public class QueryUtil {
   public static Map<String, Dictionary> getDimensionDictionaryDetail(
       List<QueryDimension> queryDimensions, List<DimensionAggregatorInfo> dimAggInfo,
       List<CustomAggregateExpression> customAggExpression,
-      AbsoluteTableIdentifier absoluteTableIdentifier) throws QueryExecutionException {
+      Set<CarbonDimension> filterComplexDimensions, AbsoluteTableIdentifier absoluteTableIdentifier)
+      throws QueryExecutionException {
     // to store dimension unique column id list, this is required as
     // dimension can be present in
     // query dimension, as well as some aggregation function will be applied
@@ -324,6 +332,10 @@ public class QueryUtil {
               dictionaryDimensionFromQuery);
         }
       }
+    }
+    Iterator<CarbonDimension> iterator = filterComplexDimensions.iterator();
+    while (iterator.hasNext()) {
+      getChildDimensionDictionaryDetail(iterator.next(), dictionaryDimensionFromQuery);
     }
     for (int i = 0; i < dimAggInfo.size(); i++) {
       List<Encoding> encodingList = dimAggInfo.get(i).getDim().getEncoder();
@@ -423,8 +435,7 @@ public class QueryUtil {
       CarbonDimension dimension = CarbonMetadata.getInstance()
           .getCarbonDimensionBasedOnColIdentifier(carbonTable, columnId);
       if (null == dimension) {
-        throw new QueryExecutionException(
-            "The column id " + columnId + " could not be resolved.");
+        throw new QueryExecutionException("The column id " + columnId + " could not be resolved.");
       }
       DictionaryColumnUniqueIdentifier dictionaryColumnUniqueIdentifier =
           new DictionaryColumnUniqueIdentifier(carbonTableIdentifier,
@@ -958,9 +969,11 @@ public class QueryUtil {
   }
 
   /**
-   * It is required for extracting column data from columngroup chunk
+   * Below method will be used to get the key structure for the column group
    *
-   * @return
+   * @param segmentProperties      segment properties
+   * @param dimColumnEvaluatorInfo dimension evaluator info
+   * @return key structure info for column group dimension
    * @throws KeyGenException
    */
   public static KeyStructureInfo getKeyStructureInfo(SegmentProperties segmentProperties,
@@ -982,6 +995,13 @@ public class QueryUtil {
     return restructureInfos;
   }
 
+  /**
+   * Below method will be used to get the column group id based on the ordinal
+   *
+   * @param segmentProperties segment properties
+   * @param ordinal           ordinal to be searched
+   * @return column group id
+   */
   public static int getColumnGroupId(SegmentProperties segmentProperties, int ordinal) {
     int[][] columnGroups = segmentProperties.getColumnGroups();
     int colGrpId = -1;
@@ -1006,29 +1026,42 @@ public class QueryUtil {
    */
   public static Map<Integer, GenericQueryType> getComplexDimensionsMap(
       List<QueryDimension> queryDimensions, Map<Integer, Integer> dimensionToBlockIndexMap,
-      int[] eachComplexColumnValueSize, Map<String, Dictionary> columnIdToDictionaryMap) {
+      int[] eachComplexColumnValueSize, Map<String, Dictionary> columnIdToDictionaryMap,
+      Set<CarbonDimension> filterDimensions) {
     Map<Integer, GenericQueryType> complexTypeMap = new HashMap<Integer, GenericQueryType>();
-    int parentBlockIndex = 0;
     for (QueryDimension dimension : queryDimensions) {
-      if (dimension.getDimension().getNumberOfChild() == 0) {
+      CarbonDimension actualDimension = dimension.getDimension();
+      if (actualDimension.getNumberOfChild() == 0) {
         continue;
       }
-      parentBlockIndex = dimensionToBlockIndexMap.get(dimension.getDimension().getOrdinal());
-      GenericQueryType parentQueryType =
-          dimension.getDimension().getDataType().equals(DataType.ARRAY) ?
-              new ArrayQueryType(dimension.getDimension().getColName(),
-                  dimension.getDimension().getColName(), parentBlockIndex) :
-              new StructQueryType(dimension.getDimension().getColName(),
-                  dimension.getDimension().getColName(),
-                  dimensionToBlockIndexMap.get(dimension.getDimension().getOrdinal()));
-      complexTypeMap.put(dimension.getDimension().getOrdinal(), parentQueryType);
-      parentBlockIndex = fillChildrenRecursive(eachComplexColumnValueSize, columnIdToDictionaryMap,
-          parentBlockIndex, dimension.getDimension(), parentQueryType);
+      fillParentDetails(dimensionToBlockIndexMap, actualDimension, complexTypeMap,
+          eachComplexColumnValueSize, columnIdToDictionaryMap);
+    }
+    if (null != filterDimensions) {
+      for (CarbonDimension filterDimension : filterDimensions) {
+        fillParentDetails(dimensionToBlockIndexMap, filterDimension, complexTypeMap,
+            eachComplexColumnValueSize, columnIdToDictionaryMap);
+      }
     }
     return complexTypeMap;
   }
 
-  private static int fillChildrenRecursive(int[] eachComplexColumnValueSize,
+  private static GenericQueryType fillParentDetails(Map<Integer, Integer> dimensionToBlockIndexMap,
+      CarbonDimension dimension, Map<Integer, GenericQueryType> complexTypeMap,
+      int[] eachComplexColumnValueSize, Map<String, Dictionary> columnIdToDictionaryMap) {
+    int parentBlockIndex = dimensionToBlockIndexMap.get(dimension.getOrdinal());
+    GenericQueryType parentQueryType = dimension.getDataType().equals(DataType.ARRAY) ?
+        new ArrayQueryType(dimension.getColName(), dimension.getColName(), parentBlockIndex) :
+        new StructQueryType(dimension.getColName(), dimension.getColName(),
+            dimensionToBlockIndexMap.get(dimension.getOrdinal()));
+    complexTypeMap.put(dimension.getOrdinal(), parentQueryType);
+    parentBlockIndex =
+        fillChildrenDetails(eachComplexColumnValueSize, columnIdToDictionaryMap, parentBlockIndex,
+            dimension, parentQueryType);
+    return parentQueryType;
+  }
+
+  private static int fillChildrenDetails(int[] eachComplexColumnValueSize,
       Map<String, Dictionary> columnIdToDictionaryMap, int parentBlockIndex,
       CarbonDimension dimension, GenericQueryType parentQueryType) {
     for (int i = 0; i < dimension.getNumberOfChild(); i++) {
@@ -1053,11 +1086,31 @@ public class QueryUtil {
                   .get(dimension.getListOfChildDimensions().get(i).getColumnId())));
       }
       if (dimension.getListOfChildDimensions().get(i).getNumberOfChild() > 0) {
-        parentBlockIndex =
-            fillChildrenRecursive(eachComplexColumnValueSize, columnIdToDictionaryMap,
-                parentBlockIndex, dimension.getListOfChildDimensions().get(i), parentQueryType);
+        parentBlockIndex = fillChildrenDetails(eachComplexColumnValueSize, columnIdToDictionaryMap,
+            parentBlockIndex, dimension.getListOfChildDimensions().get(i), parentQueryType);
       }
     }
     return parentBlockIndex;
   }
+
+  public static Set<CarbonDimension> getAllFilterDimensions(FilterResolverIntf filterResolverTree) {
+    Set<CarbonDimension> filterDimensions = new HashSet<CarbonDimension>();
+    if (null == filterResolverTree) {
+      return filterDimensions;
+    }
+    List<ColumnExpression> dimensionResolvedInfos = new ArrayList<ColumnExpression>();
+    Expression filterExpression = filterResolverTree.getFilterExpression();
+    if (filterExpression instanceof BinaryLogicalExpression) {
+      BinaryLogicalExpression logicalExpression = (BinaryLogicalExpression) filterExpression;
+      dimensionResolvedInfos.addAll(logicalExpression.getColumnList());
+    }
+    for (ColumnExpression info : dimensionResolvedInfos) {
+      if (info.isDimension() && info.getDimension().getNumberOfChild() > 0) {
+        filterDimensions.add(info.getDimension());
+      }
+    }
+    return filterDimensions;
+
+  }
+
 }

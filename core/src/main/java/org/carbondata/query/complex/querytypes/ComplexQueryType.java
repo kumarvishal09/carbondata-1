@@ -1,7 +1,3 @@
-package org.carbondata.query.complex.querytypes;
-
-import org.carbondata.core.carbon.datastore.chunk.DimensionColumnDataChunk;
-import org.carbondata.query.carbon.processor.BlocksChunkHolder;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -21,6 +17,10 @@ import org.carbondata.query.carbon.processor.BlocksChunkHolder;
  * specific language governing permissions and limitations
  * under the License.
  */
+package org.carbondata.query.complex.querytypes;
+
+import org.carbondata.core.carbon.datastore.chunk.DimensionColumnDataChunk;
+import org.carbondata.query.carbon.processor.BlocksChunkHolder;
 public class ComplexQueryType {
   protected GenericQueryType children;
 
