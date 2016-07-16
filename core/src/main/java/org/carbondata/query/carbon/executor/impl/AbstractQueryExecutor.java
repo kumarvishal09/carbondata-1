@@ -107,7 +107,7 @@ public abstract class AbstractQueryExecutor<E> implements QueryExecutor<E> {
       throw new QueryExecutionException(e);
     }
     queryStatistic
-        .addStatistics("Time taken to load the Blocks In Executor", System.currentTimeMillis());
+        .addStatistics("Time taken to load the Block(s) In Executor", System.currentTimeMillis());
     queryProperties.queryStatisticsRecorder.recordStatistics(queryStatistic);
     //
     // // updating the restructuring infos for the query

@@ -143,7 +143,7 @@ public abstract class AbstractDetailQueryResultIterator extends CarbonIterator {
       return true;
     }
     statistic.addStatistics(
-        "Time taken to processed " + blockExecutionInfos.size() + " block of output record size: "
+        "Time taken to processed " + blockExecutionInfos.size() + " block(s) of output record size: "
             + totalNumberOfOutputRecords, System.currentTimeMillis());
     blockExecutionInfos.get(0).getStatisticsRecorder().recordStatistics(statistic);
     return false;

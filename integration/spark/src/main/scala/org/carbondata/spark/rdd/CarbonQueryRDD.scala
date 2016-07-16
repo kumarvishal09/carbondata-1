@@ -209,7 +209,9 @@ class CarbonQueryRDD[V: ClassTag](
         }
         if (finished) {
           clearDictionaryCache(queryModel.getColumnToDictionaryMapping)
-          queryModel.getStatisticsRecorder.logStatistics();
+          if(null!=queryModel.getStatisticsRecorder) {
+            queryModel.getStatisticsRecorder.logStatistics();
+          }
         }
         !finished
       }

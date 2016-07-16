@@ -115,7 +115,7 @@ public abstract class InternalAbstractQueryExecutor implements InternalQueryExec
       }
       CarbonIterator<Result> queryResultIterator = scannedResultProcessor.getQueryResultIterator();
       statistic
-          .addStatistics("Time taken to scan " + tableBlockExecutionInfosList.size() + " blocks ",
+          .addStatistics("Time taken to scan " + tableBlockExecutionInfosList.size() + " block(s) ",
               System.currentTimeMillis());
       latestInfo.getStatisticsRecorder().recordStatistics(statistic);
       return queryResultIterator;
