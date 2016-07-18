@@ -68,7 +68,7 @@ public class QueryStatisticsRecorder implements Serializable {
    */
   public void logStatistics() {
     for (QueryStatistic statistic : queryStatistics) {
-      LOGGER.info(statistic.getStatistics(queryIWthTask));
+      LOGGER.statistic(statistic.getStatistics(queryIWthTask));
     }
   }
 }

@@ -224,6 +224,9 @@ class CarbonQueryRDD[V: ClassTag](
         recordCount += 1
         if (queryModel.getLimit != -1 && recordCount >= queryModel.getLimit) {
           clearDictionaryCache(queryModel.getColumnToDictionaryMapping)
+           if(null!=queryModel.getStatisticsRecorder) {
+            queryModel.getStatisticsRecorder.logStatistics();
+          }
         }
         valueClass.getValue(rowIterator.next())
       }

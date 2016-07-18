@@ -142,9 +142,9 @@ public abstract class AbstractDetailQueryResultIterator extends CarbonIterator {
     if (currentCounter < totalNumberOfNode) {
       return true;
     }
-    statistic.addStatistics(
-        "Time taken to processed " + blockExecutionInfos.size() + " block(s) of output record size: "
-            + totalNumberOfOutputRecords, System.currentTimeMillis());
+    statistic.addStatistics("Time taken to processed " + blockExecutionInfos.size()
+            + " block(s) of output record size: " + totalNumberOfOutputRecords,
+        System.currentTimeMillis());
     blockExecutionInfos.get(0).getStatisticsRecorder().recordStatistics(statistic);
     return false;
   }
