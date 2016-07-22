@@ -70,6 +70,14 @@ public abstract class AbstractDetailQueryResultIterator extends CarbonIterator {
    */
   protected long totalNumberOfOutputRecords;
   /**
+   * total scan time of the query
+   */
+  protected long totalScanTime;
+  /**
+   * total time taken to prepare the result
+   */
+  protected long totalResultPreparationTime;
+  /**
    * number of cores which can be used
    */
   private long numberOfCores;
@@ -85,16 +93,6 @@ public abstract class AbstractDetailQueryResultIterator extends CarbonIterator {
    * keep the track of number of blocklet of a block has been executed
    */
   private long[] numberOfBlockletExecutedPerBlock;
-  
-  /**
-   * total scan time of the query
-   */
-  protected long totalScanTime;
-  
-  /**
-   * total time taken to prepare the result
-   */
-  protected long totalResultPreparationTime;
 
   public AbstractDetailQueryResultIterator(List<BlockExecutionInfo> infos,
       QueryExecutorProperties executerProperties, QueryModel queryModel,
@@ -148,12 +146,14 @@ public abstract class AbstractDetailQueryResultIterator extends CarbonIterator {
       return true;
     }
     QueryStatistic statistic = new QueryStatistic();
-    statistic.addFixedTimeStatistic("Time taken to scan " + blockExecutionInfos.size() + " block(s) ",
+    statistic
+        .addFixedTimeStatistic("Time taken to scan " + blockExecutionInfos.size() + " block(s) ",
             totalScanTime);
     blockExecutionInfos.get(0).getStatisticsRecorder().recordStatistics(statistic);
     statistic = new QueryStatistic();
-    statistic.addFixedTimeStatistic("Time take to prepare query result of size " + totalNumberOfOutputRecords,
-            totalResultPreparationTime);
+    statistic.addFixedTimeStatistic(
+        "Time take to prepare query result of size " + totalNumberOfOutputRecords,
+        totalResultPreparationTime);
     blockExecutionInfos.get(0).getStatisticsRecorder().recordStatistics(statistic);
     return false;
   }
