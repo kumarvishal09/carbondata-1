@@ -18,6 +18,8 @@
 
 package org.carbondata.spark.rdd
 
+import java.util
+
 import scala.collection.JavaConverters._
 import scala.reflect.ClassTag
 
