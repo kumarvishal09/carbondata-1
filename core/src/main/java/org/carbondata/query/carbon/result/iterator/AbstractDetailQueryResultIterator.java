@@ -66,10 +66,6 @@ public abstract class AbstractDetailQueryResultIterator extends CarbonIterator {
    */
   protected int[] blockIndexToBeExecuted;
   /**
-   * to store the statistics
-   */
-  protected QueryStatistic statistic;
-  /**
    * total number of records processed
    */
   protected long totalNumberOfOutputRecords;
@@ -89,6 +85,16 @@ public abstract class AbstractDetailQueryResultIterator extends CarbonIterator {
    * keep the track of number of blocklet of a block has been executed
    */
   private long[] numberOfBlockletExecutedPerBlock;
+  
+  /**
+   * total scan time of the query
+   */
+  protected long totalScanTime;
+  
+  /**
+   * total time taken to prepare the result
+   */
+  protected long totalResultPreparationTime;
 
   public AbstractDetailQueryResultIterator(List<BlockExecutionInfo> infos,
       QueryExecutorProperties executerProperties, QueryModel queryModel,
@@ -113,7 +119,6 @@ public abstract class AbstractDetailQueryResultIterator extends CarbonIterator {
     executor = queryExecutor;
     this.blockExecutionInfos = infos;
     this.blockIndexToBeExecuted = new int[(int) numberOfCores];
-    statistic = new QueryStatistic();
     intialiseInfos();
   }
 
@@ -142,9 +147,13 @@ public abstract class AbstractDetailQueryResultIterator extends CarbonIterator {
     if (currentCounter < totalNumberOfNode) {
       return true;
     }
-    statistic.addStatistics("Time taken to processed " + blockExecutionInfos.size()
-            + " block(s) of output record size: " + totalNumberOfOutputRecords,
-        System.currentTimeMillis());
+    QueryStatistic statistic = new QueryStatistic();
+    statistic.addFixedTimeStatistic("Time taken to scan " + blockExecutionInfos.size() + " block(s) ",
+            totalScanTime);
+    blockExecutionInfos.get(0).getStatisticsRecorder().recordStatistics(statistic);
+    statistic = new QueryStatistic();
+    statistic.addFixedTimeStatistic("Time take to prepare query result of size " + totalNumberOfOutputRecords,
+            totalResultPreparationTime);
     blockExecutionInfos.get(0).getStatisticsRecorder().recordStatistics(statistic);
     return false;
   }
