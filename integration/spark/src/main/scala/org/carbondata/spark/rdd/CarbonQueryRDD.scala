@@ -18,12 +18,15 @@
 
 package org.carbondata.spark.rdd
 
+import scala.collection.JavaConverters._
+import scala.reflect.ClassTag
 
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.mapreduce.Job
+import org.apache.spark.{Logging, Partition, SparkContext, TaskContext}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.hive.DistributionUtil
-import org.apache.spark.{Logging, Partition, SparkContext, TaskContext}
+
 import org.carbondata.common.logging.LogServiceFactory
 import org.carbondata.core.cache.dictionary.Dictionary
 import org.carbondata.core.carbon.datastore.block.{Distributable, TableBlockInfo}
@@ -38,8 +41,6 @@ import org.carbondata.spark.Value
 import org.carbondata.spark.load.CarbonLoaderUtil
 import org.carbondata.spark.util.QueryPlanUtil
 
-import scala.collection.JavaConverters._
-import scala.reflect.ClassTag
 
 class CarbonSparkPartition(rddId: Int, val idx: Int,
   val locations: Array[String],
