@@ -44,6 +44,8 @@ import org.carbondata.core.carbon.metadata.blocklet.sort.SortState;
 import org.carbondata.core.carbon.metadata.datatype.DataType;
 import org.carbondata.core.carbon.metadata.encoder.Encoding;
 import org.carbondata.core.carbon.metadata.schema.table.column.ColumnSchema;
+import org.carbondata.core.carbon.querystatistics.QueryStatistic;
+import org.carbondata.core.carbon.querystatistics.QueryStatisticsRecorder;
 import org.carbondata.core.datastorage.store.FileHolder;
 import org.carbondata.core.datastorage.store.impl.FileFactory;
 import org.carbondata.core.metadata.ValueEncoderMeta;
@@ -111,17 +113,23 @@ public class DataFileFooterConverter {
   /**
    * Below method will be used to convert thrift file meta to wrapper file meta
    */
-  public DataFileFooter readDataFileFooter(String filePath, long blockOffset, long blockLength)
-      throws IOException {
+  public DataFileFooter readDataFileFooter(String filePath, long blockOffset, long blockLength,
+      QueryStatisticsRecorder statisticsRecoder) throws IOException {
     DataFileFooter dataFileFooter = new DataFileFooter();
     FileHolder fileReader = null;
     try {
       long completeBlockLength = blockOffset + blockLength;
       long footerPointer = completeBlockLength - 8;
       fileReader = FileFactory.getFileHolder(FileFactory.getFileType(filePath));
+      QueryStatistic statistic = new QueryStatistic();
       long actualFooterOffset = fileReader.readLong(filePath, footerPointer);
+      statistic.addStatistics("Time taken to read the footer offset", System.currentTimeMillis());
+      statisticsRecoder.recordStatistics(statistic);
       CarbonFooterReader reader = new CarbonFooterReader(filePath, actualFooterOffset);
+      statistic = new QueryStatistic();
       FileFooter footer = reader.readFooter();
+      statistic.addStatistics("Time taken to read the footer", System.currentTimeMillis());
+      statisticsRecoder.recordStatistics(statistic);
       dataFileFooter.setVersionId(footer.getVersion());
       dataFileFooter.setNumberOfRows(footer.getNum_rows());
       dataFileFooter.setSegmentInfo(getSegmentInfo(footer.getSegment_info()));

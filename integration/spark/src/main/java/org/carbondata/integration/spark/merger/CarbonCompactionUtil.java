@@ -28,6 +28,7 @@ import org.carbondata.core.carbon.datastore.block.TaskBlockInfo;
 import org.carbondata.core.carbon.datastore.exception.IndexBuilderException;
 import org.carbondata.core.carbon.metadata.blocklet.DataFileFooter;
 import org.carbondata.core.carbon.path.CarbonTablePath;
+import org.carbondata.core.carbon.querystatistics.QueryStatisticsRecorder;
 import org.carbondata.core.constants.CarbonCommonConstants;
 import org.carbondata.core.util.CarbonUtil;
 import org.carbondata.core.util.CarbonUtilException;
@@ -108,10 +109,12 @@ public class CarbonCompactionUtil {
       DataFileFooter dataFileMatadata = null;
       // check if segId is already present in map
       List<DataFileFooter> metadataList = segmentBlockInfoMapping.get(segId);
+      // TODO need to pass proper id so it will be easier to get the statistic details
+      QueryStatisticsRecorder recorder= new QueryStatisticsRecorder("Compaction");
       try {
         dataFileMatadata = CarbonUtil
             .readMetadatFile(blockInfo.getFilePath(), blockInfo.getBlockOffset(),
-                blockInfo.getBlockLength());
+                blockInfo.getBlockLength(),recorder);
       } catch (CarbonUtilException e) {
         throw new IndexBuilderException(e);
       }

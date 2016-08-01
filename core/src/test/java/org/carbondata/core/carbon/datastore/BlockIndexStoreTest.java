@@ -14,8 +14,10 @@ import org.carbondata.core.carbon.CarbonTableIdentifier;
 import org.carbondata.core.carbon.datastore.block.AbstractIndex;
 import org.carbondata.core.carbon.datastore.block.TableBlockInfo;
 import org.carbondata.core.carbon.datastore.exception.IndexBuilderException;
+import org.carbondata.core.carbon.querystatistics.QueryStatisticsRecorder;
 
 import junit.framework.TestCase;
+
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -37,9 +39,10 @@ public class BlockIndexStoreTest extends TestCase {
     CarbonTableIdentifier carbonTableIdentifier = new CarbonTableIdentifier("default", "t3", "1");
     AbsoluteTableIdentifier absoluteTableIdentifier =
         new AbsoluteTableIdentifier("/src/test/resources", carbonTableIdentifier);
+    QueryStatisticsRecorder recoStatisticsRecorder = new QueryStatisticsRecorder("TestQuery");
     try {
       List<AbstractIndex> loadAndGetBlocks = indexStore
-          .loadAndGetBlocks(Arrays.asList(new TableBlockInfo[] { info }), absoluteTableIdentifier);
+          .loadAndGetBlocks(Arrays.asList(new TableBlockInfo[] { info }), absoluteTableIdentifier,recoStatisticsRecorder);
       assertTrue(loadAndGetBlocks.size() == 1);
     } catch (IndexBuilderException e) {
       assertTrue(false);
@@ -73,27 +76,31 @@ public class BlockIndexStoreTest extends TestCase {
     AbsoluteTableIdentifier absoluteTableIdentifier =
         new AbsoluteTableIdentifier("/src/test/resources", carbonTableIdentifier);
     ExecutorService executor = Executors.newFixedThreadPool(3);
+    QueryStatisticsRecorder recoStatisticsRecorder = new QueryStatisticsRecorder("TestQuery");
     executor.submit(new BlockLoaderThread(Arrays.asList(new TableBlockInfo[] { info, info1 }),
-        absoluteTableIdentifier));
+        absoluteTableIdentifier,recoStatisticsRecorder));
+    QueryStatisticsRecorder recoStatisticsRecorder1 = new QueryStatisticsRecorder("TestQuery1");
     executor.submit(
         new BlockLoaderThread(Arrays.asList(new TableBlockInfo[] { info2, info3, info4 }),
-            absoluteTableIdentifier));
+            absoluteTableIdentifier,recoStatisticsRecorder1));
+    QueryStatisticsRecorder recoStatisticsRecorder2 = new QueryStatisticsRecorder("TestQuery3");
     executor.submit(new BlockLoaderThread(Arrays.asList(new TableBlockInfo[] { info, info1 }),
-        absoluteTableIdentifier));
+        absoluteTableIdentifier,recoStatisticsRecorder1));
+    QueryStatisticsRecorder recoStatisticsRecorder3 = new QueryStatisticsRecorder("TestQuery4");
     executor.submit(
         new BlockLoaderThread(Arrays.asList(new TableBlockInfo[] { info2, info3, info4 }),
-            absoluteTableIdentifier));
+            absoluteTableIdentifier,recoStatisticsRecorder3));
     executor.shutdown();
     try {
       executor.awaitTermination(1, TimeUnit.DAYS);
     } catch (InterruptedException e) {
       e.printStackTrace();
     }
-
+    QueryStatisticsRecorder recoStatisticsRecorder4 = new QueryStatisticsRecorder("TestQuery5");
     try {
       List<AbstractIndex> loadAndGetBlocks = indexStore.loadAndGetBlocks(
           Arrays.asList(new TableBlockInfo[] { info, info1, info2, info3, info4 }),
-          absoluteTableIdentifier);
+          absoluteTableIdentifier,recoStatisticsRecorder4);
       assertTrue(loadAndGetBlocks.size() == 5);
     } catch (IndexBuilderException e) {
       assertTrue(false);
@@ -138,15 +145,19 @@ public class BlockIndexStoreTest extends TestCase {
     AbsoluteTableIdentifier absoluteTableIdentifier =
         new AbsoluteTableIdentifier("/src/test/resources", carbonTableIdentifier);
     ExecutorService executor = Executors.newFixedThreadPool(3);
+    QueryStatisticsRecorder recoStatisticsRecorder1 = new QueryStatisticsRecorder("TestQuery1");
     executor.submit(new BlockLoaderThread(Arrays.asList(new TableBlockInfo[] { info, info1 }),
-        absoluteTableIdentifier));
+        absoluteTableIdentifier,recoStatisticsRecorder1));
+    QueryStatisticsRecorder recoStatisticsRecorder2 = new QueryStatisticsRecorder("TestQuery2");
     executor.submit(
         new BlockLoaderThread(Arrays.asList(new TableBlockInfo[] { info2, info3, info4 }),
-            absoluteTableIdentifier));
+            absoluteTableIdentifier,recoStatisticsRecorder2));
+    QueryStatisticsRecorder recoStatisticsRecorder3 = new QueryStatisticsRecorder("TestQuery3");
     executor.submit(new BlockLoaderThread(Arrays.asList(new TableBlockInfo[] { info5, info6 }),
-        absoluteTableIdentifier));
+        absoluteTableIdentifier,recoStatisticsRecorder3));
+    QueryStatisticsRecorder recoStatisticsRecorder4 = new QueryStatisticsRecorder("TestQuery4");
     executor.submit(new BlockLoaderThread(Arrays.asList(new TableBlockInfo[] { info7 }),
-        absoluteTableIdentifier));
+        absoluteTableIdentifier,recoStatisticsRecorder4));
 
     executor.shutdown();
     try {
@@ -155,10 +166,11 @@ public class BlockIndexStoreTest extends TestCase {
       // TODO Auto-generated catch block
       e.printStackTrace();
     }
+    QueryStatisticsRecorder recoStatisticsRecorder = new QueryStatisticsRecorder("TestQuery");
     try {
       List<AbstractIndex> loadAndGetBlocks = indexStore.loadAndGetBlocks(Arrays
               .asList(new TableBlockInfo[] { info, info1, info2, info3, info4, info5, info6, info7 }),
-          absoluteTableIdentifier);
+          absoluteTableIdentifier,recoStatisticsRecorder);
       assertTrue(loadAndGetBlocks.size() == 8);
     } catch (IndexBuilderException e) {
       assertTrue(false);
@@ -169,16 +181,17 @@ public class BlockIndexStoreTest extends TestCase {
   private class BlockLoaderThread implements Callable<Void> {
     private List<TableBlockInfo> tableBlockInfoList;
     private AbsoluteTableIdentifier absoluteTableIdentifier;
-
+    private QueryStatisticsRecorder recoQueryStatisticsRecorder;
     public BlockLoaderThread(List<TableBlockInfo> tableBlockInfoList,
-        AbsoluteTableIdentifier absoluteTableIdentifier) {
+        AbsoluteTableIdentifier absoluteTableIdentifier,QueryStatisticsRecorder recoQueryStatisticsRecorder) {
       // TODO Auto-generated constructor stub
       this.tableBlockInfoList = tableBlockInfoList;
       this.absoluteTableIdentifier = absoluteTableIdentifier;
+      this.recoQueryStatisticsRecorder=recoQueryStatisticsRecorder;
     }
 
     @Override public Void call() throws Exception {
-      indexStore.loadAndGetBlocks(tableBlockInfoList, absoluteTableIdentifier);
+      indexStore.loadAndGetBlocks(tableBlockInfoList, absoluteTableIdentifier,recoQueryStatisticsRecorder);
       return null;
     }
 

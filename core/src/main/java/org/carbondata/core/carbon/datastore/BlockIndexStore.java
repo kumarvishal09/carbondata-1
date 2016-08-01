@@ -31,14 +31,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import org.carbondata.common.logging.LogService;
-import org.carbondata.common.logging.LogServiceFactory;
 import org.carbondata.core.carbon.AbsoluteTableIdentifier;
 import org.carbondata.core.carbon.datastore.block.AbstractIndex;
 import org.carbondata.core.carbon.datastore.block.BlockIndex;
 import org.carbondata.core.carbon.datastore.block.TableBlockInfo;
 import org.carbondata.core.carbon.datastore.exception.IndexBuilderException;
 import org.carbondata.core.carbon.metadata.blocklet.DataFileFooter;
+import org.carbondata.core.carbon.querystatistics.QueryStatistic;
+import org.carbondata.core.carbon.querystatistics.QueryStatisticsRecorder;
 import org.carbondata.core.constants.CarbonCommonConstants;
 import org.carbondata.core.util.CarbonProperties;
 import org.carbondata.core.util.CarbonUtil;
@@ -50,8 +50,6 @@ import org.carbondata.core.util.CarbonUtilException;
  */
 public class BlockIndexStore {
 
-  private static final LogService LOGGER =
-      LogServiceFactory.getLogService(BlockIndexStore.class.getName());
   /**
    * singleton instance
    */
@@ -105,7 +103,8 @@ public class BlockIndexStore {
    * @throws IndexBuilderException
    */
   public List<AbstractIndex> loadAndGetBlocks(List<TableBlockInfo> tableBlocksInfos,
-      AbsoluteTableIdentifier absoluteTableIdentifier) throws IndexBuilderException {
+      AbsoluteTableIdentifier absoluteTableIdentifier, QueryStatisticsRecorder statisticRecoder)
+      throws IndexBuilderException {
     AbstractIndex[] loadedBlock = new AbstractIndex[tableBlocksInfos.size()];
     addTableLockObject(absoluteTableIdentifier);
     // sort the block info
@@ -171,7 +170,8 @@ public class BlockIndexStore {
           tableBlock = tableBlockMapTemp.get(blockInfo);
           // if still block is not present then load the block
           if (null == tableBlock) {
-            blocksList.add(executor.submit(new BlockLoaderThread(blockInfo, tableBlockMapTemp)));
+            blocksList.add(executor
+                .submit(new BlockLoaderThread(blockInfo, tableBlockMapTemp, statisticRecoder)));
           }
         }
       } else {
@@ -216,16 +216,21 @@ public class BlockIndexStore {
   }
 
   private AbstractIndex loadBlock(Map<TableBlockInfo, AbstractIndex> tableBlockMapTemp,
-      TableBlockInfo blockInfo) throws CarbonUtilException {
+      TableBlockInfo blockInfo, QueryStatisticsRecorder statisticRecoder)
+      throws CarbonUtilException {
     AbstractIndex tableBlock;
     DataFileFooter footer;
     // getting the data file meta data of the block
     footer = CarbonUtil.readMetadatFile(blockInfo.getFilePath(), blockInfo.getBlockOffset(),
-        blockInfo.getBlockLength());
+        blockInfo.getBlockLength(), statisticRecoder);
     tableBlock = new BlockIndex();
     footer.setTableBlockInfo(blockInfo);
     // building the block
+    QueryStatistic statistic = new QueryStatistic();
     tableBlock.buildIndex(Arrays.asList(footer));
+    statistic
+        .addStatistics("Time taken to build the block(BTree building)", System.currentTimeMillis());
+    statisticRecoder.recordStatistics(statistic);
     tableBlockMapTemp.put(blockInfo, tableBlock);
     // finally remove the lock object from block info lock as once block is loaded
     // it will not come inside this if condition
@@ -295,15 +300,19 @@ public class BlockIndexStore {
     // block info
     private TableBlockInfo blockInfo;
 
+    private QueryStatisticsRecorder statisticRecoder;
+
     private BlockLoaderThread(TableBlockInfo blockInfo,
-        Map<TableBlockInfo, AbstractIndex> tableBlockMap) {
+        Map<TableBlockInfo, AbstractIndex> tableBlockMap,
+        QueryStatisticsRecorder statisticRecoder) {
       this.tableBlockMap = tableBlockMap;
       this.blockInfo = blockInfo;
+      this.statisticRecoder = statisticRecoder;
     }
 
     @Override public AbstractIndex call() throws Exception {
       // load and return the loaded blocks
-      return loadBlock(tableBlockMap, blockInfo);
+      return loadBlock(tableBlockMap, blockInfo, this.statisticRecoder);
     }
   }
 }

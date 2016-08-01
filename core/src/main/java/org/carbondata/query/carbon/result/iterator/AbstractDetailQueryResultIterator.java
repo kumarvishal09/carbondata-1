@@ -152,7 +152,7 @@ public abstract class AbstractDetailQueryResultIterator extends CarbonIterator {
     blockExecutionInfos.get(0).getStatisticsRecorder().recordStatistics(statistic);
     statistic = new QueryStatistic();
     statistic.addFixedTimeStatistic(
-        "Time take to prepare query result of size " + totalNumberOfOutputRecords,
+        "Time taken to prepare query result of size " + totalNumberOfOutputRecords,
         totalResultPreparationTime);
     blockExecutionInfos.get(0).getStatisticsRecorder().recordStatistics(statistic);
     return false;

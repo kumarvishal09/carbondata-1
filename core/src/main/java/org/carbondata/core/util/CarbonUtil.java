@@ -20,11 +20,27 @@
 
 package org.carbondata.core.util;
 
-import java.io.*;
+import java.io.Closeable;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.security.PrivilegedExceptionAction;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -44,6 +60,7 @@ import org.carbondata.core.carbon.metadata.schema.table.column.CarbonMeasure;
 import org.carbondata.core.carbon.metadata.schema.table.column.ColumnSchema;
 import org.carbondata.core.carbon.path.CarbonStorePath;
 import org.carbondata.core.carbon.path.CarbonTablePath;
+import org.carbondata.core.carbon.querystatistics.QueryStatisticsRecorder;
 import org.carbondata.core.constants.CarbonCommonConstants;
 import org.carbondata.core.datastorage.store.FileHolder;
 import org.carbondata.core.datastorage.store.columnar.ColumnarKeyStoreDataHolder;
@@ -1474,16 +1491,17 @@ public final class CarbonUtil {
   /**
    * Below method will be used to read the data file matadata
    *
-   * @param filePath file path
-   * @param blockOffset   offset in the file
+   * @param filePath    file path
+   * @param blockOffset offset in the file
    * @return Data file metadata instance
    * @throws CarbonUtilException
    */
-  public static DataFileFooter readMetadatFile(String filePath, long blockOffset, long blockLength)
-      throws CarbonUtilException {
+  public static DataFileFooter readMetadatFile(String filePath, long blockOffset, long blockLength,
+      QueryStatisticsRecorder statisticRecoder) throws CarbonUtilException {
     DataFileFooterConverter fileFooterConverter = new DataFileFooterConverter();
     try {
-      return fileFooterConverter.readDataFileFooter(filePath, blockOffset, blockLength);
+      return fileFooterConverter
+          .readDataFileFooter(filePath, blockOffset, blockLength, statisticRecoder);
     } catch (IOException e) {
       throw new CarbonUtilException("Problem while reading the file metadata", e);
     }

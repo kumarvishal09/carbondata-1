@@ -102,7 +102,7 @@ public abstract class AbstractQueryExecutor<E> implements QueryExecutor<E> {
     try {
       queryProperties.dataBlocks = BlockIndexStore.getInstance()
           .loadAndGetBlocks(queryModel.getTableBlockInfos(),
-              queryModel.getAbsoluteTableIdentifier());
+              queryModel.getAbsoluteTableIdentifier(), queryProperties.queryStatisticsRecorder);
     } catch (IndexBuilderException e) {
       throw new QueryExecutionException(e);
     }
