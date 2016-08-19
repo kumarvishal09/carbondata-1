@@ -44,7 +44,7 @@ public class IncludeFilterExecuterImpl implements FilterExecuter {
     this.segmentProperties = segmentProperties;
     dimColumnExecuterInfo = new DimColumnExecuterFilterInfo();
     FilterUtil.prepareKeysFromSurrogates(dimColumnEvaluatorInfo.getFilterValues(),
-        segmentProperties.getDimensionKeyGenerator(), dimColumnEvaluatorInfo.getDimension(),
+        segmentProperties, dimColumnEvaluatorInfo.getDimension(),
         dimColumnExecuterInfo);
 
   }

@@ -135,7 +135,7 @@ public final class FilterUtil {
         case RESTRUCTURE:
           return new RestructureFilterExecuterImpl(
               filterExpressionResolverTree.getDimColResolvedFilterInfo(),
-              segmentProperties.getDimensionKeyGenerator());
+              segmentProperties);
         case ROWLEVEL_LESSTHAN:
         case ROWLEVEL_LESSTHAN_EQUALTO:
         case ROWLEVEL_GREATERTHAN_EQUALTO:
@@ -634,11 +634,12 @@ public final class FilterUtil {
   }
 
   public static byte[][] getKeyArray(DimColumnFilterInfo dimColumnFilterInfo,
-      CarbonDimension carbonDimension, KeyGenerator blockLevelKeyGenerator) {
+      CarbonDimension carbonDimension, SegmentProperties segmentProperties) {
     if (!carbonDimension.hasEncoding(Encoding.DICTIONARY)) {
       return dimColumnFilterInfo.getNoDictionaryFilterValuesList()
           .toArray((new byte[dimColumnFilterInfo.getNoDictionaryFilterValuesList().size()][]));
     }
+    KeyGenerator blockLevelKeyGenerator = segmentProperties.getDimensionKeyGenerator();
     int[] keys = new int[blockLevelKeyGenerator.getDimCount()];
     List<byte[]> filterValuesList = new ArrayList<byte[]>(20);
     Arrays.fill(keys, 0);
@@ -646,12 +647,17 @@ public final class FilterUtil {
         getRangesForMaskedByte((carbonDimension.getKeyOrdinal()), blockLevelKeyGenerator);
     if (null != dimColumnFilterInfo) {
       for (Integer surrogate : dimColumnFilterInfo.getFilterList()) {
-        try {
-          keys[carbonDimension.getKeyOrdinal()] = surrogate;
-          filterValuesList
-              .add(getMaskedKey(rangesForMaskedByte, blockLevelKeyGenerator.generateKey(keys)));
-        } catch (KeyGenException e) {
-          LOGGER.error(e.getMessage());
+        if (surrogate <= segmentProperties.getDimColumnsCardinality()[carbonDimension
+            .getKeyOrdinal()]) {
+          try {
+            keys[carbonDimension.getKeyOrdinal()] = surrogate;
+            filterValuesList
+                .add(getMaskedKey(rangesForMaskedByte, blockLevelKeyGenerator.generateKey(keys)));
+          } catch (KeyGenException e) {
+            LOGGER.error(e.getMessage());
+          }
+        } else {
+          break;
         }
       }
 
@@ -1014,9 +1020,9 @@ public final class FilterUtil {
    * @param dimColumnExecuterInfo
    */
   public static void prepareKeysFromSurrogates(DimColumnFilterInfo filterValues,
-      KeyGenerator blockKeyGenerator, CarbonDimension dimension,
+      SegmentProperties segmentProperties, CarbonDimension dimension,
       DimColumnExecuterFilterInfo dimColumnExecuterInfo) {
-    byte[][] keysBasedOnFilter = getKeyArray(filterValues, dimension, blockKeyGenerator);
+    byte[][] keysBasedOnFilter = getKeyArray(filterValues, dimension, segmentProperties);
     dimColumnExecuterInfo.setFilterKeys(keysBasedOnFilter);
 
   }
