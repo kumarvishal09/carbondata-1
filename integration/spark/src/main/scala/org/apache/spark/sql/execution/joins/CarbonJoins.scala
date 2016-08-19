@@ -59,7 +59,7 @@ case class BroadCastFilterPushJoin(
     }
     val buildPlanOutput = buildPlan.execute()
     val input: Array[InternalRow] = buildPlanOutput.map(_.copy()).collect()
-    val inputCopy: Array[InternalRow] = buildPlanOutput.map(_.copy()).collect()
+    val inputCopy: Array[InternalRow] = input.clone
     (input, inputCopy)
   }
   // Use lazy so that we won't do broadcast when calling explain but still cache the broadcast value
